@@ -179,3 +179,7 @@ class IGXNative(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def setHandshake(self, value):
         """Sets the handshaking protocol for serial port transmission of data."""
+
+    @abc.abstractmethod
+    def isOpen(self):
+        """Is connnection open."""

@@ -46,8 +46,10 @@ from gurux_common.ReceiveParameters import ReceiveParameters
 from gurux_common.ReceiveEventArgs import ReceiveEventArgs
 from gurux_common.IGXMediaListener import IGXMediaListener
 from ._GXSynchronousMediaBase import _GXSynchronousMediaBase
-from .handlers.GXWindowsHandler import GXWindowsHandler
-from .handlers.GXLinuxHandler import GXLinuxHandler
+if os.name == 'nt':  # sys.platform == 'win32':
+    from .handlers.GXWindowsHandler import GXWindowsHandler
+elif os.name == 'posix':
+    from .handlers.GXLinuxHandler import GXLinuxHandler
 
 # pylint: disable=too-many-public-methods, too-many-instance-attributes, too-many-arguments
 class GXSerial(IGXMedia):
@@ -75,8 +77,8 @@ class GXSerial(IGXMedia):
         self.__stopBits = stopBits
         ###Used parity.
         self.__parity = parity
-        ###Handle to serial port.
-        self.__h = None
+        ###Handle to serial port handler.
+        self.__h = self.__initialize()
         self.__portName = port
         self.__syncBase = _GXSynchronousMediaBase(100)
         ###Amount of bytes sent.
@@ -92,7 +94,6 @@ class GXSerial(IGXMedia):
         self.__receiver = None
         self.__closing = threading.Event()
         self.__lock = threading.Lock()
-        self.__initialize()
 
     def __getTrace(self):
         return self.__trace
@@ -132,20 +133,19 @@ class GXSerial(IGXMedia):
         for it in self.__listeners:
             it.onTrace(self, e)
 
-    def __initialize(self):
+    @classmethod
+    def __initialize(cls):
         ###Initialize Gurux serial port library.
-        if not self.__h:
-            if os.name == 'nt':
-                self.__h = GXWindowsHandler()
-            elif os.name == 'posix':
-                self.__h = GXLinuxHandler()
-            else:
-                raise ImportError("Sorry: no implementation for your platform ('{}') available".format(os.name))
+        if os.name == 'nt':
+            return GXWindowsHandler()
+        if os.name == 'posix':
+            return GXLinuxHandler()
+        raise ImportError("Sorry: no implementation for your platform ('{}') available".format(os.name))
 
-    def getPortNames(self):
+    @classmethod
+    def getPortNames(cls):
         """Gets an array of serial port names for the current computer."""
-        self.__initialize()
-        return self.__h.getPortNames()
+        return cls.__initialize().getPortNames()
 
     def getAvailableBaudRates(self):
         # pylint: disable=no-self-use
@@ -253,15 +253,15 @@ class GXSerial(IGXMedia):
             self.__syncBase.resetReceivedSize()
 
     def __getBaudRate(self) -> gurux_common.io.BaudRate:
-        if self.__h:
+        if self.__h.isOpen():
             self.__baudRate = gurux_common.io.BaudRate(self.__h.getBaudRate())
         return self.__baudRate
 
     def __setBaudRate(self, value: gurux_common.io.BaudRate):
         if self.__baudRate != value:
             self.__baudRate = value
-            if self.__h:
-                self.__h.setBaudRate(value)
+            if self.__h.isOpen():
+                self.__h.setBaudRate(int(value))
             self.__notifyPropertyChanged("BaudRate")
 
     baudRate = property(__getBaudRate, __setBaudRate)
@@ -288,14 +288,14 @@ class GXSerial(IGXMedia):
         return self.__h.getCtsHolding()
 
     def __getDataBits(self):
-        if self.__h:
+        if self.__h.isOpen():
             self.__dataBits = self.__h.getDataBits()
         return self.__dataBits
 
     def __setDataBits(self, value):
         self.__dataBits = value
-        if self.__h:
-            self.__h.setDataBits(value)
+        if self.__h.isOpen():
+            self.__h.setDataBits(int(value))
 
     dataBits = property(__getDataBits, __setDataBits)
     """The standard length of data bits per byte."""
@@ -314,7 +314,7 @@ class GXSerial(IGXMedia):
     """Is Data Terminal Ready (DTR) signal enabled."""
 
     def __getHandshake(self):
-        if self.__h:
+        if self.__h.isOpen():
             self.__handshake = self.__h.getHandshake()
         return self.__handshake
 
@@ -328,14 +328,14 @@ class GXSerial(IGXMedia):
         return self.__h is not None
 
     def __getParity(self) -> gurux_common.io.Parity:
-        if self.__h:
+        if self.__h.isOpen():
             self.__parity = gurux_common.io.Parity(self.__h.getParity())
         return self.__parity
 
     def __setParity(self, value: gurux_common.io.Parity):
         self.__parity = value
-        if self.__h:
-            self.__h.setParity(self.__parity)
+        if self.__h.isOpen():
+            self.__h.setParity(int(self.__parity))
 
     parity = property(__getParity, __setParity)
     """Parity-checking protocol."""
@@ -358,14 +358,14 @@ class GXSerial(IGXMedia):
     """Is Request to Send (RTS) signal enabled during serial communication."""
 
     def __getStopBits(self):
-        if self.__h:
+        if self.__h.isOpen():
             self.__stopBits = gurux_common.io.StopBits(self.__h.getStopBits())
         return self.__stopBits
 
     def __setStopBits(self, value):
         self.__stopBits = value
-        if self.__h:
-            self.__h.setStopBits(self.__stopBits)
+        if self.__h.isOpen():
+            self.__h.setStopBits(int(self.__stopBits))
 
     stopBits = property(__getStopBits, __setStopBits)
     """Sets the standard number of stop bits per byte."""
@@ -423,11 +423,11 @@ class GXSerial(IGXMedia):
 
     def setSettings(self, value: str):
         #Reset to default values.
-        self.__portName = ""
-        self.__baudRate = gurux_common.io.BaudRate.BAUD_RATE_9600
-        self.__stopBits = gurux_common.io.StopBits.ONE
-        self.__parity = gurux_common.io.Parity.NONE
-        self.__dataBits = 8
+        self.portName = ""
+        self.baudRate = gurux_common.io.BaudRate.BAUD_RATE_9600
+        self.stopBits = gurux_common.io.StopBits.ONE
+        self.parity = gurux_common.io.Parity.NONE
+        self.dataBits = 8
 
     def copy(self, target):
         self.portName = target.portName

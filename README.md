@@ -42,13 +42,12 @@ and if in server mode following events might be important.
 
 cl = new GXSerial()
 #Change name of the COM port to correct one.
-cl.portName("COM1")
-cl.baudRate(9600)
-cl.dataBits(8)
-cl.parity(Parity.None)
-cl.stopBits(StopBits.ONE)
+cl.portName="COM1"
+cl.baudRate=9600
+cl.dataBits=8
+cl.parity=Parity.None
+cl.stopBits=StopBits.ONE
 cl.open()
-
 ```
 
 Data is send with send command:

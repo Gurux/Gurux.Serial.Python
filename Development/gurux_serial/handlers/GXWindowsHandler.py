@@ -37,7 +37,7 @@ from .GXSettings import GXSettings
 from .IGXNative import IGXNative
 
 #Constant values.
-INVALID_HANDLE_VALUE = ctypes.wintypes.HANDLE(-1).value
+INVALID_HANDLE_VALUE = -1
 MS_DSR_ON = 32
 EV_RING = 256
 EV_PERR = 512
@@ -84,6 +84,17 @@ ERROR_OPERATION_ABORTED = 995
 ERROR_IO_INCOMPLETE = 996
 ERROR_IO_PENDING = 997
 ERROR_INVALID_USER_BUFFER = 1784
+
+READ_CONTROL = 0x00020000
+STANDARD_RIGHTS_READ = READ_CONTROL
+
+KEY_QUERY_VALUE = 0x0001
+HKEY_LOCAL_MACHINE = 0x80000002
+SYNCHRONIZE = 0x00100000
+KEY_ENUMERATE_SUB_KEYS = 0x0008
+KEY_NOTIFY = 0x0010
+KEY_READ = ((STANDARD_RIGHTS_READ | KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS | KEY_NOTIFY) & (~SYNCHRONIZE))
+KEY_EXECUTE = KEY_READ & ~SYNCHRONIZE
 
 if ctypes.sizeof(ctypes.c_void_p) == 8:
     ULONG_PTR = ctypes.c_int64
@@ -154,8 +165,8 @@ class GXWindowsHandler(GXSettings, IGXNative):
         """Constructor."""
         GXSettings.__init__(self)
         self.h = INVALID_HANDLE_VALUE
-        self._overlapped_read = INVALID_HANDLE_VALUE
-        self._overlapped_write = INVALID_HANDLE_VALUE
+        self._overlapped_read = None
+        self._overlapped_write = None
         self._closing = ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0)
         self.__closed = threading.Event()
 
@@ -167,6 +178,29 @@ class GXWindowsHandler(GXSettings, IGXNative):
 
     def getPortNames(self):
         """Returns available serial ports."""
+        #Use RegOpenKeyEx() with the new Registry path to get an open handle
+        #to the child key you want to enumerate.
+        hKey = ctypes.wintypes.HKEY()
+        ret = ctypes.windll.Kernel32.RegOpenKeyExW(HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\SERIALCOMM", \
+            0, KEY_ENUMERATE_SUB_KEYS | KEY_EXECUTE | KEY_QUERY_VALUE, ctypes.byref(hKey))
+        if ret != 0:
+            raise Exception('Failed to get port names: {!r}'.format(ctypes.WinError(ret)))
+
+        dwType = ctypes.wintypes.DWORD()
+        dwcValueName = ctypes.wintypes.DWORD(256)
+        valueName = ctypes.create_unicode_buffer(256)
+        cbData = ctypes.wintypes.DWORD(256)
+        deviceName = ctypes.create_unicode_buffer(236)
+        pos = 0
+        ports = []
+        while pos < 100:
+            ret = ctypes.windll.Kernel32.RegEnumValueW(hKey, pos, valueName, ctypes.byref(dwcValueName), None, ctypes.byref(dwType), deviceName, ctypes.byref(cbData))
+            if ret != 0:
+                break
+            ports.append(deviceName.value)
+            pos += 1
+        ctypes.windll.Kernel32.RegCloseKey(hKey)
+        return ports
 
     def __getCommState(self):
         if self.h == INVALID_HANDLE_VALUE:
@@ -224,12 +258,14 @@ class GXWindowsHandler(GXSettings, IGXNative):
                                                     FILE_FLAG_OVERLAPPED,
                                                     0)
         if self.h == INVALID_HANDLE_VALUE:
-            raise Exception("Failed to open port {!r}: {!r}".format(port, ctypes.WinError()))
+            ret = ctypes.windll.Kernel32.GetLastError()
+            raise Exception("Failed to open port {!r}: {!r}".format(port, ctypes.WinError(ret)))
         try:
             self._overlapped_read = OVERLAPPED(hEvent=ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0))
             self._overlapped_write = OVERLAPPED(hEvent=ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0))
             if ctypes.windll.Kernel32.ResetEvent(self._closing) == 0:
-                raise Exception('Failed to open port: {!r}'.format(ctypes.WinError()))
+                ret = ctypes.windll.Kernel32.GetLastError()
+                raise Exception('Failed to open port: {!r}'.format(ctypes.WinError(ret)))
             self.__updateSettings()
             #Clear buffers.
             ctypes.windll.Kernel32.PurgeComm(self.h, PURGE_TXCLEAR | PURGE_TXABORT | PURGE_RXCLEAR | PURGE_RXABORT)
@@ -239,6 +275,9 @@ class GXWindowsHandler(GXSettings, IGXNative):
             except:
                 pass
             raise
+
+    def isOpen(self):
+        return self.h != INVALID_HANDLE_VALUE
 
     def close(self):
         """

@@ -4,7 +4,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>ab7f2b01-befd-4f68-8bdc-36d2475fcd62</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>Gurux.Serial.Python.py</StartupFile>
+    <StartupFile>
+    </StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -21,7 +22,6 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Gurux.Serial.Python.py" />
     <Compile Include="gurux_serial\GXSerial.py">
       <SubType>Code</SubType>
     </Compile>
