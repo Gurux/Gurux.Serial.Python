@@ -167,6 +167,10 @@ class GXSerial(IGXMedia):
 
         if isinstance(data, str):
             data = data.encode()
+        elif isinstance(data, bytearray):
+            data = bytes(data)
+        else:
+            raise ValueError("Invalid data value.")
         self.__h.write(data)
         self.__bytesSent += len(data)
 

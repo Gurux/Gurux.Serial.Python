@@ -37,7 +37,6 @@ import os
 import fcntl
 import array
 import termios
-import select
 
 from .GXSettings import GXSettings
 from .IGXNative import IGXNative

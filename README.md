@@ -15,6 +15,7 @@ If you have problems you can ask your questions in Gurux [Forum](http://www.guru
 You can get source codes from http://www.github.com/gurux or intall package: 
 
 ```python
+pip install gurux-common
 pip install gurux-serial
 ```
 
@@ -39,21 +40,19 @@ and if in server mode following events might be important.
 * onClientDisconnected                
 
 ```python
-
-cl = new GXSerial()
 #Change name of the COM port to correct one.
-cl.portName="COM1"
-cl.baudRate=9600
-cl.dataBits=8
-cl.parity=Parity.None
-cl.stopBits=StopBits.ONE
+cl = new GXSerial("COM1")
+cl.baudRate = BAUD_RATE_9600
+cl.dataBits = 8
+cl.parity = Parity.None
+cl.stopBits = StopBits.ONE
 cl.open()
 ```
 
 Data is send with send command:
 
 ```python
-cl.send("Hello World!");
+cl.send("Hello World!")
 ```
 In default mode received data is coming as asynchronously from OnReceived event.
 Event listener is added like this:

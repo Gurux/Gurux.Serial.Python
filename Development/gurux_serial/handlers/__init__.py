@@ -31,7 +31,10 @@
 #  This code is licensed under the GNU General Public License v2.
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
+import os
 from .GXSettings import *
 from .IGXNative import *
-from .GXWindowsHandler import *
-from .GXLinuxHandler import *
+if os.name == 'nt':  # sys.platform == 'win32':
+    from .GXWindowsHandler import *
+elif os.name == 'posix':
+    from .GXLinuxHandler import *

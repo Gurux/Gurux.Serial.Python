@@ -249,9 +249,8 @@ class GXWindowsHandler(GXSettings, IGXNative):
         self.close()
         if not port:
             raise Exception("Invalid serial port name.")
-        port = '\\\\.\\' + port
         # Open the file for writing.
-        self.h = ctypes.windll.Kernel32.CreateFileW(port, GENERIC_READ | GENERIC_WRITE,
+        self.h = ctypes.windll.Kernel32.CreateFileW('\\\\.\\' + port, GENERIC_READ | GENERIC_WRITE,
                                                     0,  # exclusive access
                                                     None,  # no security
                                                     OPEN_EXISTING,
