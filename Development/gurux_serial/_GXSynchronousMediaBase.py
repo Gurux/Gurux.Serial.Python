@@ -193,6 +193,7 @@ class _GXSynchronousMediaBase:
                     isReceived = self.__receivedEvent.wait()
                 elif waitTime != 0:
                     isReceived = self.__receivedEvent.wait(waitTime / 1000)
+                self.__receivedEvent.clear()
 
             if self.exception:
                 raise Exception(self.exception)

@@ -329,7 +329,7 @@ class GXSerial(IGXMedia):
     """Handshaking protocol for serial port transmission of data."""
 
     def isOpen(self):
-        return self.__h is not None
+        return self.__h and self.__h.isOpen()
 
     def __getParity(self) -> gurux_common.io.Parity:
         if self.__h.isOpen():

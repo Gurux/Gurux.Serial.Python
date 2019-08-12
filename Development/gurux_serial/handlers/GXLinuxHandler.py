@@ -339,14 +339,14 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("setRtsEnable failed. " + e.strerror)
+            raise Exception("setDtrEnable failed. " + e.strerror)
         cflag = ~termios.CRTSCTS
         if value:
             cflag |= termios.CRTSCTS
         try:
             termios.tcsetattr(self.h, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
         except termios.error as e:
-            raise Exception("setRtsEnable failed. " + e.strerror)
+            raise Exception("setDtrEnable failed. " + e.strerror)
 
     def getDsrHolding(self):
         """

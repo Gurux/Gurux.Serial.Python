@@ -159,6 +159,14 @@ class DCB(ctypes.Structure):
     ('EvtChar', ctypes.c_char),\
     ('wReserved1', ctypes.wintypes.WORD),]
 
+#ctypes.windll.kernel32.WriteFile don't work for all Windows versions for some reason.
+_stdcall_libraries = {}
+_stdcall_libraries['kernel32'] = ctypes.WinDLL('kernel32')
+WriteFile = _stdcall_libraries['kernel32'].WriteFile
+WriteFile.restype = ctypes.wintypes.BOOL
+LPOVERLAPPED = ctypes.POINTER(OVERLAPPED)
+WriteFile.argtypes = [ctypes.wintypes.HANDLE, ctypes.wintypes.LPCVOID, ctypes.wintypes.DWORD, ctypes.wintypes.LPDWORD, LPOVERLAPPED]
+
 # pylint: disable=too-many-public-methods,too-many-instance-attributes
 class GXWindowsHandler(GXSettings, IGXNative):
     def __init__(self):
@@ -286,11 +294,9 @@ class GXWindowsHandler(GXSettings, IGXNative):
             ctypes.windll.Kernel32.SetEvent(self._closing)
             self.__closed.wait()
             if self._overlapped_read:
-                self._cancel_overlapped_io(self._overlapped_read)
                 ctypes.windll.Kernel32.CloseHandle(self._overlapped_read.hEvent)
                 self._overlapped_read = None
             if self._overlapped_write:
-                self._cancel_overlapped_io(self._overlapped_write)
                 ctypes.windll.Kernel32.CloseHandle(self._overlapped_write.hEvent)
                 self._overlapped_write = None
             ctypes.windll.Kernel32.CloseHandle(self.h)
@@ -441,7 +447,6 @@ class GXWindowsHandler(GXSettings, IGXNative):
             ret = ctypes.windll.Kernel32.GetLastError()
             if ret not in (ERROR_SUCCESS, ERROR_IO_PENDING):
                 raise Exception("Read failed ({!r})".format(ctypes.WinError()))
-            #_closing
             arrtype = ctypes.wintypes.HANDLE * 2
             handle_array = arrtype(self._closing, self._overlapped_read.hEvent)
             ret = ctypes.windll.kernel32.WaitForMultipleObjects(2, handle_array, 0, -1)
@@ -461,14 +466,20 @@ class GXWindowsHandler(GXSettings, IGXNative):
         if self.h == INVALID_HANDLE_VALUE:
             raise Exception("Serial port is not open")
         n = ctypes.wintypes.DWORD()
-        if ctypes.windll.Kernel32.WriteFile(self.h, data, len(data), ctypes.byref(n), self._overlapped_write) == 0:
+        if WriteFile(self.h, data, len(data), ctypes.byref(n), self._overlapped_write) == 0:
             errorcode = ERROR_SUCCESS
         else:
             errorcode = ctypes.windll.Kernel32.GetLastError()
         if errorcode in (ERROR_INVALID_USER_BUFFER, ERROR_NOT_ENOUGH_MEMORY, ERROR_OPERATION_ABORTED):
             return 0
-        if errorcode in (ERROR_SUCCESS, ERROR_IO_PENDING):
-            # no info on true length provided by OS function in async mode
+        if errorcode == ERROR_IO_PENDING:
+            arrtype = ctypes.wintypes.HANDLE * 2
+            handle_array = arrtype(self._closing, self._overlapped_write.hEvent)
+            ret = ctypes.windll.kernel32.WaitForMultipleObjects(2, handle_array, 0, 1000)
+            #If user has close the media.
+            if ret == 0:
+                return None
+        if errorcode == ERROR_SUCCESS:
             return len(data)
         raise Exception("write failed ({!r})".format(ctypes.WinError()))
 
@@ -538,16 +549,3 @@ class GXWindowsHandler(GXSettings, IGXNative):
             dcb.fOutX = dcb.fInX = 1
         if ctypes.windll.Kernel32.SetCommState(self.h, ctypes.byref(dcb)) == 0:
             raise Exception("Failed to set comm state.")
-
-    def _cancel_overlapped_io(self, overlapped):
-        """Cancel a blocking read operation, may be called from other thread"""
-        # check if read operation is pending
-        rc = ctypes.wintypes.DWORD()
-        err = ctypes.windll.Kernel32.GetOverlappedResult(self.h,\
-            ctypes.byref(overlapped),\
-            ctypes.byref(rc),\
-            False)
-        if not err and ctypes.windll.Kernel32.GetLastError() in (ERROR_IO_PENDING, ERROR_IO_INCOMPLETE):
-            # cancel, ignoring any errors (e.g.  it may just have finished on
-            # its own)
-            ctypes.windll.Kernel32.CancelIoEx(self.h, overlapped)
