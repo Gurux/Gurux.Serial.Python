@@ -33,8 +33,9 @@
 # ---------------------------------------------------------------------------
 import abc
 
+ABC = abc.ABCMeta('ABC', (object,), {'__slots__': ()})
 # pylint: disable=too-many-public-methods
-class IGXNative(metaclass=abc.ABCMeta):
+class IGXNative(ABC):
     """
     This class is used to communicate with native serial port class. This is
     reserved for inner use. DO NOT USE.

@@ -35,6 +35,8 @@ import threading
 import datetime
 from gurux_common.enums.TraceLevel import TraceLevel
 
+###Python 2 requires this
+#pylint: disable=bad-option-value,old-style-class
 class _GXSynchronousMediaBase:
     def __init__(self, length=0):
         """Constructor.
@@ -110,7 +112,7 @@ class _GXSynchronousMediaBase:
         """
         failure = cls.__computeFailure(pattern)
         j = 0
-        if (not data or len(data) < index):
+        if not data or len(data) < index:
             return -1
 
         for i in range(index, count):
@@ -166,8 +168,7 @@ class _GXSynchronousMediaBase:
             if isinstance(args.eop, (bytearray, bytes, list)):
                 terminator = args.eop
             else:
-                terminator = bytearray(1)
-                terminator[0] = args.eop
+                terminator = bytearray([args.eop])
             nSize = len(terminator)
         #Wait until reply occurred.
         while foundPosition == -1:
@@ -194,7 +195,6 @@ class _GXSynchronousMediaBase:
                 elif waitTime != 0:
                     isReceived = self.__receivedEvent.wait(waitTime / 1000)
                 self.__receivedEvent.clear()
-
             if self.exception:
                 raise Exception(self.exception)
             #If timeout occurred.
@@ -226,7 +226,6 @@ class _GXSynchronousMediaBase:
                     if len(terminator) != 1 and self.__receivedSize - index < len(terminator):
                         index = self.__receivedSize - len(terminator)
                     foundPosition = self.indexOf(self.__receivedBuffer, terminator, index, self.__receivedSize)
-
                     self.__lastPosition = self.__receivedSize
                     if foundPosition != -1:
                         foundPosition += len(terminator)

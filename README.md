@@ -12,6 +12,9 @@ We are updating documentation on Gurux web page.
 
 If you have problems you can ask your questions in Gurux [Forum](http://www.gurux.org/forum).
 
+Note!
+Minimum requirements for Gurux project is Python 3.6. This is because projects are depending on Flag and IntFlag.
+
 You can get source codes from http://www.github.com/gurux or intall package: 
 
 ```python

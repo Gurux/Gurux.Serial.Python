@@ -36,7 +36,7 @@ import threading
 import gurux_common.io.BaudRate
 import gurux_common.io.Parity
 import gurux_common.io.StopBits
-
+from gurux_common.GXCommon import GXCommon
 from gurux_common.enums import TraceLevel, MediaState, TraceTypes
 from gurux_common.IGXMedia import IGXMedia
 from gurux_common.MediaStateEventArgs import MediaStateEventArgs
@@ -54,7 +54,7 @@ elif os.name == 'posix':
 # pylint: disable=too-many-public-methods, too-many-instance-attributes, too-many-arguments
 class GXSerial(IGXMedia):
     def __init__(self,
-                 port: str,
+                 port,
                  baudRate=gurux_common.io.BaudRate.BAUD_RATE_9600,
                  dataBits=8,
                  parity=gurux_common.io.Parity.NONE,
@@ -105,10 +105,10 @@ class GXSerial(IGXMedia):
     trace = property(__getTrace, __setTrace)
     """Trace level."""
 
-    def addListener(self, listener: IGXMediaListener):
+    def addListener(self, listener):
         self.__listeners.append(listener)
 
-    def removeListener(self, listener: IGXMediaListener):
+    def removeListener(self, listener):
         self.__listeners.remove(listener)
 
     def __notifyPropertyChanged(self, info):
@@ -167,8 +167,12 @@ class GXSerial(IGXMedia):
 
         if isinstance(data, str):
             data = data.encode()
-        elif isinstance(data, bytearray):
+        elif isinstance(data, (bytearray, list)):
             data = bytes(data)
+        elif isinstance(data, memoryview):
+            data = data.tobytes()
+        elif isinstance(data, int):
+            data = bytes([data])
         else:
             raise ValueError("Invalid data value.")
         self.__h.write(data)
@@ -185,7 +189,6 @@ class GXSerial(IGXMedia):
     def __handleReceivedData(self, buff, info):
         if not buff:
             return
-        eop = self.eop
         self.__bytesReceived += len(buff)
         totalCount = 0
         if self.getIsSynchronous:
@@ -193,9 +196,8 @@ class GXSerial(IGXMedia):
             with self.__syncBase.getSync():
                 self.__syncBase.appendData(buff, 0, len(buff))
                 #Search end of packet if it is given.
-                if eop:
-                    tmp = bytearray(1)
-                    tmp[0] = eop
+                if self.eop:
+                    tmp = bytearray([self.eop])
                     totalCount = _GXSynchronousMediaBase.indexOf(buff, tmp, 0, len(buff))
                     if totalCount != -1:
                         if self.trace == TraceLevel.VERBOSE:
@@ -229,7 +231,7 @@ class GXSerial(IGXMedia):
             self.__syncBase.resetLastPosition()
 
         self.__notifyMediaStateChange(MediaState.OPENING)
-        if TraceLevel.INFO in self.__trace:
+        if self.__trace & TraceLevel.INFO:
             eopString = str(self.eop)
             self.__notifyTrace(TraceEventArgs(TraceTypes.INFO,\
                 "Settings: Port: " + self.portName + " Baud Rate: " + str(self.baudRate) + \
@@ -256,12 +258,12 @@ class GXSerial(IGXMedia):
             self.__bytesSent = 0
             self.__syncBase.resetReceivedSize()
 
-    def __getBaudRate(self) -> gurux_common.io.BaudRate:
+    def __getBaudRate(self):
         if self.__h.isOpen():
             self.__baudRate = gurux_common.io.BaudRate(self.__h.getBaudRate())
         return self.__baudRate
 
-    def __setBaudRate(self, value: gurux_common.io.BaudRate):
+    def __setBaudRate(self, value):
         if self.__baudRate != value:
             self.__baudRate = value
             if self.__h.isOpen():
@@ -331,12 +333,12 @@ class GXSerial(IGXMedia):
     def isOpen(self):
         return self.__h and self.__h.isOpen()
 
-    def __getParity(self) -> gurux_common.io.Parity:
+    def __getParity(self):
         if self.__h.isOpen():
             self.__parity = gurux_common.io.Parity(self.__h.getParity())
         return self.__parity
 
-    def __setParity(self, value: gurux_common.io.Parity):
+    def __setParity(self, value):
         self.__parity = value
         if self.__h.isOpen():
             self.__h.setParity(int(self.__parity))
@@ -374,7 +376,7 @@ class GXSerial(IGXMedia):
     stopBits = property(__getStopBits, __setStopBits)
     """Sets the standard number of stop bits per byte."""
 
-    def receive(self, args: ReceiveParameters):
+    def receive(self, args):
         return self.__syncBase.receive(args)
 
     def getBytesSent(self):
@@ -425,7 +427,7 @@ class GXSerial(IGXMedia):
             sb += nl
         return sb
 
-    def setSettings(self, value: str):
+    def setSettings(self, value):
         #Reset to default values.
         self.portName = ""
         self.baudRate = gurux_common.io.BaudRate.BAUD_RATE_9600

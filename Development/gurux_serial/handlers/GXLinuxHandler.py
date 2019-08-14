@@ -32,11 +32,14 @@
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
 import glob
+import threading
 import os.path
 import os
 import fcntl
 import array
 import termios
+import select
+import struct
 
 from .GXSettings import GXSettings
 from .IGXNative import IGXNative
@@ -65,6 +68,8 @@ class GXLinuxHandler(GXSettings, IGXNative):
         """Constructor."""
         GXSettings.__init__(self)
         self.h = None
+        self.__closedR = None
+        self.__closedW = None
 
     def getPortNames(self):
         """Returns available serial ports."""
@@ -78,8 +83,9 @@ class GXLinuxHandler(GXSettings, IGXNative):
         # hide non-present internal serial ports
         devices = []
         for device in tmp:
-            if os.access(device, os.R_OK) and os.access(device, os.W_OK):
-                devices.append(device)
+            name = os.path.basename(device)
+            if os.path.exists('/sys/class/tty/{}/device'.format(name)):
+                devices.append(os.path.realpath('/sys/class/tty/{}/device'.format(name)))
         return devices
 
     def isOpen(self):
@@ -139,14 +145,26 @@ class GXLinuxHandler(GXSettings, IGXNative):
             cflag |= (termios.PARENB | _CMSPAR)
             cflag &= ~(termios.PARODD)
         termios.tcsetattr(self.h, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
+        #Clear imput buffer.
+        termios.tcflush(self.h, termios.TCIFLUSH)
+        self.__closedR, self.__closedW = os.pipe()
+        fcntl.fcntl(self.__closedR, fcntl.F_SETFL, os.O_NONBLOCK)
 
     def close(self):
         """
         Close serial port.
         """
         if self.h:
+            os.write(self.__closedW, b'1')
+            os.close(self.__closedW)
+            os.close(self.__closedR)
+            self.__closedW = None
+            self.__closedR = None
             os.close(self.h)
             self.h = None
+
+    def fileno(self):
+        return self.h
 
     def getBaudRate(self):
         """
@@ -155,7 +173,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (_, _, _, _, _, rate, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getBaudRate failed. " + e.strerror)
+            raise Exception("getBaudRate failed. " + str(e))
         for k, v in _BAUDRATE_CONSTANTS.items():
             if v == rate:
                 return k
@@ -168,7 +186,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("setBaudRate failed. " + e.strerror)
+            raise Exception("setBaudRate failed. " + str(e))
         cflag &= ~(termios.CBAUD | termios.CBAUDEX)
         cflag |= _BAUDRATE_CONSTANTS[value]
         ispeed = _BAUDRATE_CONSTANTS[value]
@@ -176,7 +194,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             termios.tcsetattr(self.h, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
         except termios.error as e:
-            raise Exception("setBaudRate failed. " + e.strerror)
+            raise Exception("setBaudRate failed. " + str(e))
 
     def getDataBits(self):
         """
@@ -185,7 +203,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (_, _, cflag, _, _, _, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getDataBits failed. " + e.strerror)
+            raise Exception("getDataBits failed. " + str(e))
 
         cs = cflag & termios.CSIZE
         for k, v in _DATABITS_TO_CFLAG.items():
@@ -201,13 +219,13 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("setDataBits failed. " + e.strerror)
+            raise Exception("setDataBits failed. " + str(e))
         cflag &= ~termios.CSIZE
         cflag |= _DATABITS_TO_CFLAG[value]
         try:
             termios.tcsetattr(self.h, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
         except termios.error as e:
-            raise Exception("setDataBits failed. " + e.strerror)
+            raise Exception("setDataBits failed. " + str(e))
 
     def getParity(self):
         """Get parity.
@@ -215,7 +233,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (_, _, cflag, _, _, _, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getParity failed. " + e.strerror)
+            raise Exception("getParity failed. " + str(e))
         #Parity.MARK
         if (cflag & (termios.PARENB | _CMSPAR | termios.PARODD)) == (termios.PARENB | _CMSPAR | termios.PARODD):
             return 3
@@ -239,7 +257,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("setParity failed. " + e.strerror)
+            raise Exception("setParity failed. " + str(e))
 
         iflag &= ~(termios.INPCK | termios.ISTRIP)
         if self._parity == 0: #Parity.NONE:
@@ -259,7 +277,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             termios.tcsetattr(self.h, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
         except termios.error as e:
-            raise Exception("setParity failed. " + e.strerror)
+            raise Exception("setParity failed. " + str(e))
 
     def getStopBits(self):
         """
@@ -268,7 +286,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (_, _, cflag, _, _, _, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getStopBits failed. " + e.strerror)
+            raise Exception("getStopBits failed. " + str(e))
         if cflag & termios.CSTOPB != 0:
             return 1
         return 0
@@ -281,20 +299,25 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("setStopBits failed. " + e.strerror)
+            raise Exception("setStopBits failed. " + str(e))
         cflag &= ~termios.CSTOPB
         if value == 1:
             cflag |= termios.CSTOPB
         try:
             termios.tcsetattr(self.h, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
         except termios.error as e:
-            raise Exception("setStopBits failed. " + e.strerror)
+            raise Exception("setStopBits failed. " + str(e))
 
     def setBreakState(self, value):
         """
         Set break state.
         value : Is serial port in break state.
         """
+        if value:
+            fcntl.ioctl(self.fd, TIOCSBRK)
+        else:
+            fcntl.ioctl(self.fd, TIOCCBRK)
+
 
     def getRtsEnable(self):
         """
@@ -303,24 +326,18 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (_, _, cflag, _, _, _, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getCtsHolding failed. " + e.strerror)
+            raise Exception("getCtsHolding failed. " + str(e))
         return (cflag & termios.CRTSCTS) != 0
 
     def setRtsEnable(self, value):
         """Set Request To Send state.
         value: Is RTS set.
         """
-        try:
-            (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(self.h)
-        except termios.error as e:
-            raise Exception("setRtsEnable failed. " + e.strerror)
-        cflag = ~termios.CRTSCTS
-        if value:
-            cflag |= termios.CRTSCTS
-        try:
-            termios.tcsetattr(self.h, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
-        except termios.error as e:
-            raise Exception("setRtsEnable failed. " + e.strerror)
+        tmp = struct.pack('I', 4)
+        if self._rts_state:
+            fcntl.ioctl(self.h, 0x5416, tmp)
+        else:
+            fcntl.ioctl(self.h, 0x5417, tmp)
 
     def getDtrEnable(self):
         """
@@ -329,24 +346,18 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (_, _, cflag, _, _, _, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getCtsHolding failed. " + e.strerror)
+            raise Exception("getCtsHolding failed. " + str(e))
         return cflag & termios.CRTSCTS != 0
 
     def setDtrEnable(self, value):
         """Is Data Terminal ready set.
         value : True, if DTR is set.
         """
-        try:
-            (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(self.h)
-        except termios.error as e:
-            raise Exception("setDtrEnable failed. " + e.strerror)
-        cflag = ~termios.CRTSCTS
+        tmp = struct.pack('I', 2)
         if value:
-            cflag |= termios.CRTSCTS
-        try:
-            termios.tcsetattr(self.h, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
-        except termios.error as e:
-            raise Exception("setDtrEnable failed. " + e.strerror)
+            fcntl.ioctl(self.h, 0x5416, tmp)
+        else:
+            fcntl.ioctl(self.h, 0x5417, tmp)
 
     def getDsrHolding(self):
         """
@@ -371,18 +382,25 @@ class GXLinuxHandler(GXSettings, IGXNative):
 
     def read(self):
         """Read data from serial port to the buffer."""
-        return os.read(self.h, 100)
+        ready, _, _ = select.select([self.h, self.__closedR], [], [], )
+        if self.__closedR in ready:
+            return None
+        cnt = self.getBytesToRead()
+        ret = os.read(self.h, cnt)
+        return bytearray(ret)
 
     def write(self, data):
         """Write data to the serial port."""
-        return os.write(self.h, data)
+        ret = os.write(self.h, data)
+        termios.tcflush(self.h, termios.TCOFLUSH)
+        return ret
 
     def getCtsHolding(self):
         """Returns Clear To Send holding flag."""
         try:
             (_, _, cflag, _, _, _, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getCtsHolding failed. " + e.strerror)
+            raise Exception("getCtsHolding failed. " + str(e))
         return cflag & termios.CRTSCTS != 0
 
     def getCDHolding(self):
