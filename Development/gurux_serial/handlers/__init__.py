@@ -32,9 +32,9 @@
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
 import os
-from .GXSettings import *
-from .IGXNative import *
+from .GXSettings import GXSettings
+from .IGXNative import IGXNative
 if os.name == 'nt':  # sys.platform == 'win32':
-    from .GXWindowsHandler import *
+    from .GXWindowsHandler import GXWindowsHandler
 elif os.name == 'posix':
-    from .GXLinuxHandler import *
+    from .GXLinuxHandler import GXLinuxHandler

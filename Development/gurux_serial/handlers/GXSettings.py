@@ -35,13 +35,16 @@ import gurux_common.io.BaudRate
 import gurux_common.io.Parity
 import gurux_common.io.StopBits
 
+###Python 2 requires this
+# pylint: disable=bad-option-value,old-style-class,too-few-public-methods
 class GXSettings:
+
     def __init__(self,
                  baudRate=gurux_common.io.BaudRate.BAUD_RATE_9600,
                  dataBits=8,
                  parity=gurux_common.io.Parity.NONE,
                  stopBits=gurux_common.io.StopBits.ONE):
-        self._baudrate = baudRate
-        self._dataBits = dataBits
-        self._parity = parity
-        self._stopBits = stopBits
+        self.baudrate = baudRate
+        self.dataBits = dataBits
+        self.parity = parity
+        self.stopBits = stopBits

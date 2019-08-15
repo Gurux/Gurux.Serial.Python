@@ -31,6 +31,7 @@
 #  This code is licensed under the GNU General Public License v2.
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
+import sys
 import threading
 import datetime
 from gurux_common.enums.TraceLevel import TraceLevel
@@ -165,10 +166,7 @@ class _GXSynchronousMediaBase:
         if waitTime <= 0:
             waitTime = -1
         if args.eop:
-            if isinstance(args.eop, (bytearray, bytes, list)):
-                terminator = args.eop
-            else:
-                terminator = bytearray([args.eop])
+            terminator = self.toBytes(args.eop)
             nSize = len(terminator)
         #Wait until reply occurred.
         while foundPosition == -1:
@@ -281,3 +279,23 @@ class _GXSynchronousMediaBase:
                     arr[len(oldArray): len(oldArray) + len(newArray)] = newArray[0:len(newArray)]
                     args.reply = arr
         return foundPosition != -1
+
+    #Convert value to bytes.
+    @classmethod
+    def toBytes(cls, value):
+        if isinstance(value, bytes):
+            pass
+        elif isinstance(value, str):
+            value = value.encode()
+        elif isinstance(value, (bytearray, list)):
+            value = bytes(value)
+        elif isinstance(value, memoryview):
+            value = value.tobytes()
+        elif isinstance(value, int):
+            value = bytes([value])
+        elif isinstance(value, int):
+            raise ValueError("Invalid data value.")
+        #Python 2.7 can't compare bytes if value is not ascii.
+        if sys.version_info < (3, 0) and not isinstance(value, bytearray):
+            return bytearray(value)
+        return value

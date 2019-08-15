@@ -33,18 +33,16 @@
 # ---------------------------------------------------------------------------
 import os
 import threading
+import traceback
 import gurux_common.io.BaudRate
 import gurux_common.io.Parity
 import gurux_common.io.StopBits
-from gurux_common.GXCommon import GXCommon
 from gurux_common.enums import TraceLevel, MediaState, TraceTypes
 from gurux_common.IGXMedia import IGXMedia
 from gurux_common.MediaStateEventArgs import MediaStateEventArgs
 from gurux_common.TraceEventArgs import TraceEventArgs
 from gurux_common.PropertyChangedEventArgs import PropertyChangedEventArgs
-from gurux_common.ReceiveParameters import ReceiveParameters
 from gurux_common.ReceiveEventArgs import ReceiveEventArgs
-from gurux_common.IGXMediaListener import IGXMediaListener
 from ._GXSynchronousMediaBase import _GXSynchronousMediaBase
 if os.name == 'nt':  # sys.platform == 'win32':
     from .handlers.GXWindowsHandler import GXWindowsHandler
@@ -68,17 +66,17 @@ class GXSerial(IGXMedia):
         """
         self.__receiveDelay = 0
         self.__asyncWaitTime = 0
-        #Values are saved if port is not open and user try to set them.
-        #Serial port baud rate.
-        self.__baudRate = baudRate
-        ###Used data bits.
-        self.__dataBits = dataBits
-        ###Stop bits.
-        self.__stopBits = stopBits
-        ###Used parity.
-        self.__parity = parity
         ###Handle to serial port handler.
         self.__h = self.__initialize()
+        #Values are saved if port is not open and user try to set them.
+        #Serial port baud rate.
+        self.__h.baudRate = baudRate
+        ###Used data bits.
+        self.__h.dataBits = dataBits
+        ###Stop bits.
+        self.__h.stopBits = stopBits
+        ###Used parity.
+        self.__h.parity = parity
         self.__portName = port
         self.__syncBase = _GXSynchronousMediaBase(100)
         ###Amount of bytes sent.
@@ -120,7 +118,7 @@ class GXSerial(IGXMedia):
         """Notify clients from error occurred."""
         for it in self.__listeners:
             it.onError(self, ex)
-            if TraceLevel.ERROR in self.__trace:
+            if self.__trace & TraceLevel.ERROR != 0:
                 it.onTrace(self, TraceEventArgs(TraceTypes.ERROR, ex))
 
     def __notifyReceived(self, e):
@@ -181,7 +179,7 @@ class GXSerial(IGXMedia):
     def __notifyMediaStateChange(self, state):
         ###Notify client from media state change.
         for it in self.__listeners:
-            if TraceLevel.ERROR in self.__trace:
+            if self.__trace & TraceLevel.ERROR != 0:
                 it.onTrace(self, TraceEventArgs(TraceTypes.INFO, state))
             it.onMediaStateChange(self, MediaStateEventArgs(state))
 
@@ -191,13 +189,13 @@ class GXSerial(IGXMedia):
             return
         self.__bytesReceived += len(buff)
         totalCount = 0
-        if self.getIsSynchronous:
+        if self.getIsSynchronous():
             arg = None
             with self.__syncBase.getSync():
                 self.__syncBase.appendData(buff, 0, len(buff))
                 #Search end of packet if it is given.
                 if self.eop:
-                    tmp = bytearray([self.eop])
+                    tmp = _GXSynchronousMediaBase.toBytes(self.eop)
                     totalCount = _GXSynchronousMediaBase.indexOf(buff, tmp, 0, len(buff))
                     if totalCount != -1:
                         if self.trace == TraceLevel.VERBOSE:
@@ -218,8 +216,10 @@ class GXSerial(IGXMedia):
             try:
                 data = self.__h.read()
                 if data:
-                    self.__handleReceivedData(data, self.portName)
-            except:
+                    data = _GXSynchronousMediaBase.toBytes(data)
+                    self.__handleReceivedData(data, self.__portName)
+            except Exception as ex:
+                #traceback.print_exc()
                 pass
 
     def open(self):
@@ -231,10 +231,10 @@ class GXSerial(IGXMedia):
             self.__syncBase.resetLastPosition()
 
         self.__notifyMediaStateChange(MediaState.OPENING)
-        if self.__trace & TraceLevel.INFO:
+        if self.__trace & TraceLevel.INFO != 0:
             eopString = str(self.eop)
             self.__notifyTrace(TraceEventArgs(TraceTypes.INFO,\
-                "Settings: Port: " + self.portName + " Baud Rate: " + str(self.baudRate) + \
+                "Settings: Port: " + self.__portName + " Baud Rate: " + str(self.baudRate) + \
                 " Data Bits: " + str(int(self.dataBits)) + " Parity: " + str(self.parity) +\
                " Stop Bits: " + str(self.stopBits) + " Eop:" + eopString))
 
@@ -260,15 +260,15 @@ class GXSerial(IGXMedia):
 
     def __getBaudRate(self):
         if self.__h.isOpen():
-            self.__baudRate = gurux_common.io.BaudRate(self.__h.getBaudRate())
-        return self.__baudRate
+            self.__h.baudRate = gurux_common.io.BaudRate(self.__h.getBaudRate())
+        return self.__h.baudRate
 
     def __setBaudRate(self, value):
-        if self.__baudRate != value:
-            self.__baudRate = value
+        if self.__h.baudRate != value:
+            self.__h.baudRate = value
             if self.__h.isOpen():
                 self.__h.setBaudRate(int(value))
-            self.__notifyPropertyChanged("BaudRate")
+            self.__notifyPropertyChanged("baudRate")
 
     baudRate = property(__getBaudRate, __setBaudRate)
     """baud rate."""
@@ -295,11 +295,11 @@ class GXSerial(IGXMedia):
 
     def __getDataBits(self):
         if self.__h.isOpen():
-            self.__dataBits = self.__h.getDataBits()
-        return self.__dataBits
+            self.__h.dataBits = self.__h.getDataBits()
+        return self.__h.dataBits
 
     def __setDataBits(self, value):
-        self.__dataBits = value
+        self.__h.dataBits = value
         if self.__h.isOpen():
             self.__h.setDataBits(int(value))
 
@@ -335,23 +335,26 @@ class GXSerial(IGXMedia):
 
     def __getParity(self):
         if self.__h.isOpen():
-            self.__parity = gurux_common.io.Parity(self.__h.getParity())
-        return self.__parity
+            self.__h.parity = gurux_common.io.Parity(self.__h.getParity())
+        return self.__h.parity
 
     def __setParity(self, value):
-        self.__parity = value
+        self.__h.parity = value
         if self.__h.isOpen():
-            self.__h.setParity(int(self.__parity))
+            self.__h.setParity(int(self.__h.parity))
 
     parity = property(__getParity, __setParity)
     """Parity-checking protocol."""
 
     def __getPortName(self):
         return self.__portName
-    def __setPortName(self, value):
-        self.__portName = value
 
-    portName = property(__getPortName, __setPortName)
+    def __setPortName(self, value):
+        if value != self.__portName:
+            self.__portName = value
+            self.__notifyPropertyChanged("port")
+
+    port = property(__getPortName, __setPortName)
     """The port for communications, including but not limited to all available COM ports."""
 
     def __getRtsEnable(self):
@@ -365,13 +368,13 @@ class GXSerial(IGXMedia):
 
     def __getStopBits(self):
         if self.__h.isOpen():
-            self.__stopBits = gurux_common.io.StopBits(self.__h.getStopBits())
-        return self.__stopBits
+            self.__h.stopBits = gurux_common.io.StopBits(self.__h.getStopBits())
+        return self.__h.stopBits
 
     def __setStopBits(self, value):
-        self.__stopBits = value
+        self.__h.stopBits = value
         if self.__h.isOpen():
-            self.__h.setStopBits(int(self.__stopBits))
+            self.__h.setStopBits(int(self.__h.stopBits))
 
     stopBits = property(__getStopBits, __setStopBits)
     """Sets the standard number of stop bits per byte."""
@@ -402,48 +405,48 @@ class GXSerial(IGXMedia):
             sb += "</Port>"
             sb += nl
 
-        if self.__baudRate != gurux_common.io.BaudRate.BAUD_RATE_9600:
+        if self.__h.baudRate != gurux_common.io.BaudRate.BAUD_RATE_9600:
             sb += "<BaudRate>"
-            sb += str(int(self.__baudRate))
+            sb += str(int(self.__h.baudRate))
             sb += "</BaudRate>"
             sb += nl
 
-        if self.__stopBits != gurux_common.io.StopBits.ONE:
+        if self.__h.stopBits != gurux_common.io.StopBits.ONE:
             sb += "<StopBits>"
-            sb += str(int(self.__stopBits))
+            sb += str(int(self.__h.stopBits))
             sb += "</StopBits>"
             sb += nl
 
-        if self.__parity != gurux_common.io.Parity.NONE:
+        if self.__h.parity != gurux_common.io.Parity.NONE:
             sb += "<Parity>"
-            sb += str(int(self.__parity))
+            sb += str(int(self.__h.parity))
             sb += "</Parity>"
             sb += nl
 
-        if self.__dataBits != 9:
+        if self.__h.dataBits != 8:
             sb += "<DataBits>"
-            sb += str(int(self.__dataBits))
+            sb += str(int(self.__h.dataBits))
             sb += "</DataBits>"
             sb += nl
         return sb
 
     def setSettings(self, value):
         #Reset to default values.
-        self.portName = ""
-        self.baudRate = gurux_common.io.BaudRate.BAUD_RATE_9600
-        self.stopBits = gurux_common.io.StopBits.ONE
-        self.parity = gurux_common.io.Parity.NONE
-        self.dataBits = 8
+        self.__portName = ""
+        self.__h.baudRate = gurux_common.io.BaudRate.BAUD_RATE_9600
+        self.__h.stopBits = gurux_common.io.StopBits.ONE
+        self.__h.parity = gurux_common.io.Parity.NONE
+        self.__h.dataBits = 8
 
     def copy(self, target):
-        self.portName = target.portName
-        self.baudRate = target.baudRate
-        self.stopBits = target.stopBits
-        self.parity = target.parity
-        self.dataBits = target.dataBits
+        self.__portName = target.portName
+        self.__h.baudRate = target.baudRate
+        self.__h.stopBits = target.stopBits
+        self.__h.parity = target.parity
+        self.__h.dataBits = target.dataBits
 
     def getName(self):
-        return self.portName
+        return self.__portName
 
     def getMediaType(self):
         return "Serial"
@@ -460,7 +463,7 @@ class GXSerial(IGXMedia):
             self.__syncBase.resetReceivedSize()
 
     def validate(self):
-        if not self.portName:
+        if not self.__portName:
             raise Exception("Invalid port name.")
 
     def __getEop(self):

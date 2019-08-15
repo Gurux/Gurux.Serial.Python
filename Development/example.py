@@ -1,54 +1,44 @@
-See An [Gurux](http://www.gurux.org/ "Gurux") for an overview.
-
-Join the Gurux Community or follow [@Gurux](https://twitter.com/guruxorg "@Gurux") for project updates.
-
-With gurux.serial component you can send data easily syncronously or asyncronously using serial port connection.
-
-Open Source GXNet media component, made by Gurux Ltd, is a part of GXMedias set of media components, which programming interfaces help you implement communication by chosen connection type. Gurux media components also support the following connection types: serial port.
-
-For more info check out [Gurux](http://www.gurux.org/ "Gurux").
-
-We are updating documentation on Gurux web page. 
-
-If you have problems you can ask your questions in Gurux [Forum](http://www.gurux.org/forum).
-
-Note!
-Minimum requirements for Gurux project is Python 3.6. This is because projects are depending on Flag and IntFlag.
-
-You can get source codes from http://www.github.com/gurux or intall package: 
-
-```python
-pip install gurux-common
-pip install gurux-serial
-```
-
-Simple example
-=========================== 
-Before use you must set following settings:
-* PortName
-* BaudRate
-* DataBits
-* Parity
-* StopBits
-
-It is also good to add listener to listen following events.
-* onError
-* onReceived
-* onMediaStateChange
-* onTrace
-* onPropertyChanged
-
-This example sends data to the serial port and waits reply.
-Change serial port before use.
-
-
-```python
+#
+#  --------------------------------------------------------------------------
+#   Gurux Ltd
+#
+#
+#
+#  Filename: $HeadURL$
+#
+#  Version: $Revision$,
+#                $Date$
+#                $Author$
+#
+#  Copyright (c) Gurux Ltd
+#
+# ---------------------------------------------------------------------------
+#
+#   DESCRIPTION
+#
+#  This file is a part of Gurux Device Framework.
+#
+#  Gurux Device Framework is Open Source software; you can redistribute it
+#  and/or modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; version 2 of the License.
+#  Gurux Device Framework is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU General Public License for more details.
+#
+#  More information of Gurux products: http://www.gurux.org
+#
+#  This code is licensed under the GNU General Public License v2.
+#  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
+# ---------------------------------------------------------------------------
 import time
 from gurux_common import ReceiveParameters
 from gurux_common import IGXMediaListener
 from gurux_common.enums.TraceLevel import TraceLevel
 from gurux_serial import GXSerial
-
+# ---------------------------------------------------------------------------
+# This example sends data to the serial port and waits reply.
+# ---------------------------------------------------------------------------
 #pylint: disable=no-self-argument
 class sampleclient(IGXMediaListener):
 
@@ -58,10 +48,13 @@ class sampleclient(IGXMediaListener):
         print(str(GXSerial.getPortNames()))
         #Define End Of Packet char.
         eop = '\r'
-        #TODO: Update correct port and serial port settings.
-        media = GXSerial("SERIAL PORT TO USE")
+        #Make connection using serial port.
+        media = GXSerial("COM10")
         #Start to listen events from the media.
         media.addListener(self)
+        #Update port here to call onPropertyChanged event.
+        #TODO: Update correct port.
+        media.port = "UPDATE CORRECT PORT"
         #Show all traces.
         media.trace = TraceLevel.VERBOSE
         #Set EOP for the media.
@@ -71,7 +64,6 @@ class sampleclient(IGXMediaListener):
             media.open()
             r = ReceiveParameters()
             r.eop = eop
-            #Minimium amount of bytes to receive.
             r.count = 5
             #Wait reply for 2 seconds.
             r.waitTime = 2000
@@ -88,7 +80,7 @@ class sampleclient(IGXMediaListener):
                     raise Exception("Failed to receive reply from the server.")
             ############################
             #Send async data.
-            media.send("Notify from the meter!\r")
+            media.send("Server !\r")
             #Wait 1 second to receive reply from the server.
             time.sleep(1)
         except Exception as ex:
@@ -140,5 +132,3 @@ class sampleclient(IGXMediaListener):
 
 if __name__ == '__main__':
     sampleclient()
-```
-

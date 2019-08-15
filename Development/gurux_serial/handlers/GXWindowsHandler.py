@@ -103,20 +103,24 @@ else:
 
 #Structyres.
 class DUMMYSTRUCTNAME(ctypes.Structure):
+    # pylint: disable=too-few-public-methods
     _fields_ = [('Offset', ctypes.wintypes.DWORD),\
     ('OffsetHigh', ctypes.wintypes.DWORD),]
 
 class DUMMYUNIONNAME(ctypes.Union):
+    # pylint: disable=too-few-public-methods
     _fields_ = [('_0', DUMMYSTRUCTNAME),\
     ('Pointer', ctypes.c_void_p),]
 
 class OVERLAPPED(ctypes.Structure):
+    # pylint: disable=too-few-public-methods
     _fields_ = [('Internal', ULONG_PTR),\
     ('InternalHigh', ULONG_PTR),\
     ('_0', DUMMYUNIONNAME),\
     ('hEvent', ctypes.wintypes.HANDLE),]
 
 class COMSTAT(ctypes.Structure):
+    # pylint: disable=too-few-public-methods
     _fields_ = [('fCtsHold', ctypes.wintypes.DWORD, 1),\
     ('fDsrHold', ctypes.wintypes.DWORD, 1),\
     ('fRlsdHold', ctypes.wintypes.DWORD, 1),\
@@ -129,7 +133,7 @@ class COMSTAT(ctypes.Structure):
     ('cbOutQue', ctypes.wintypes.DWORD),]
 
 class DCB(ctypes.Structure):
-    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-few-public-methods, too-many-instance-attributes
     _fields_ = [('DCBlength', ctypes.wintypes.DWORD),\
     ('BaudRate', ctypes.wintypes.DWORD),\
     ('fBinary', ctypes.wintypes.DWORD, 1),\
@@ -165,6 +169,7 @@ _stdcall_libraries['kernel32'] = ctypes.WinDLL('kernel32')
 WriteFile = _stdcall_libraries['kernel32'].WriteFile
 WriteFile.restype = ctypes.wintypes.BOOL
 LPOVERLAPPED = ctypes.POINTER(OVERLAPPED)
+# pylint: disable=no-member
 WriteFile.argtypes = [ctypes.wintypes.HANDLE, ctypes.wintypes.LPCVOID, ctypes.wintypes.DWORD, ctypes.wintypes.LPDWORD, LPOVERLAPPED]
 
 # pylint: disable=too-many-public-methods,too-many-instance-attributes

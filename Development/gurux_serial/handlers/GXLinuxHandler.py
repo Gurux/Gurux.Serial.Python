@@ -31,37 +31,39 @@
 #  This code is licensed under the GNU General Public License v2.
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
+# pylint: disable=import-error
 import glob
-import threading
 import os.path
 import os
 import fcntl
 import array
-import termios
 import select
 import struct
-
+import termios
 from .GXSettings import GXSettings
 from .IGXNative import IGXNative
 
+#Constant values.
 _CMSPAR = 0o10000000000
+_TIOCSBRK = 0x5427
+_TIOCCBRK = 0x5428
+
 _BAUDRATE_CONSTANTS = {
-        50: termios.B50, 75: termios.B75, 110: termios.B110, 134: termios.B134,
-        150: termios.B150, 200: termios.B200, 300: termios.B300,
-        600: termios.B600, 1200: termios.B1200, 1800: termios.B1800,
-        2400: termios.B2400, 4800: termios.B4800, 9600: termios.B9600,
-        19200: termios.B19200, 38400: termios.B38400, 57600: termios.B57600,
-        115200: termios.B115200, 230400: termios.B230400,
-        # Linux baudrates bits missing in termios module included below
-        460800: 0x1004, 500000: 0x1005, 576000: 0x1006,
-        921600: 0x1007, 1000000: 0x1008, 1152000: 0x1009,
-        1500000: 0x100A, 2000000: 0x100B, 2500000: 0x100C,
-        3000000: 0x100D, 3500000: 0x100E, 4000000: 0x100F,
+    50: termios.B50, 75: termios.B75, 110: termios.B110, 134: termios.B134,
+    150: termios.B150, 200: termios.B200, 300: termios.B300,
+    600: termios.B600, 1200: termios.B1200, 1800: termios.B1800,
+    2400: termios.B2400, 4800: termios.B4800, 9600: termios.B9600,
+    19200: termios.B19200, 38400: termios.B38400, 57600: termios.B57600,
+    115200: termios.B115200, 230400: termios.B230400,
+    # Linux baudrates that are not included in termios module
+    460800: 0x1004, 500000: 0x1005, 576000: 0x1006,
+    921600: 0x1007, 1000000: 0x1008, 1152000: 0x1009,
+    1500000: 0x100A, 2000000: 0x100B, 2500000: 0x100C,
+    3000000: 0x100D, 3500000: 0x100E, 4000000: 0x100F,
     }
 
-_DATABITS_TO_CFLAG = {
-        5: termios.CS5, 6: termios.CS6, 7: termios.CS7, 8: termios.CS8
-    }
+_DATABITS_TO_CFLAG = {5: termios.CS5, 6: termios.CS6, 7: termios.CS7, 8: termios.CS8}
+
 # pylint: disable=too-many-public-methods,too-many-instance-attributes
 class GXLinuxHandler(GXSettings, IGXNative):
     def __init__(self):
@@ -85,14 +87,14 @@ class GXLinuxHandler(GXSettings, IGXNative):
         for device in tmp:
             name = os.path.basename(device)
             if os.path.exists('/sys/class/tty/{}/device'.format(name)):
-                devices.append(os.path.realpath('/sys/class/tty/{}/device'.format(name)))
+                devices.append(device)
         return devices
 
     def isOpen(self):
         return self.h
 
     def open(self, port):
-        #pylint: disable=bare-except
+        #pylint: disable=bare-except,no-member
         """
         Open serial port.
 
@@ -111,26 +113,26 @@ class GXLinuxHandler(GXSettings, IGXNative):
         oflag &= ~(termios.OPOST | termios.ONLCR | termios.OCRNL)
         iflag &= ~(termios.INLCR | termios.IGNCR | termios.ICRNL | termios.IGNBRK)
         #Baud rate
-        ispeed = _BAUDRATE_CONSTANTS[int(self._baudrate)]
-        ospeed = _BAUDRATE_CONSTANTS[int(self._baudrate)]
+        ispeed = _BAUDRATE_CONSTANTS[int(self.baudrate)]
+        ospeed = _BAUDRATE_CONSTANTS[int(self.baudrate)]
         #Databits
         cflag &= ~termios.CSIZE
-        if self._dataBits == 8:
+        if self.dataBits == 8:
             cflag |= termios.CS8
-        elif self._dataBits == 7:
+        elif self.dataBits == 7:
             cflag |= termios.CS7
-        elif self._dataBits == 6:
+        elif self.dataBits == 6:
             cflag |= termios.CS6
-        elif self._dataBits == 5:
+        elif self.dataBits == 5:
             cflag |= termios.CS5
         #Stop bits
-        if int(self._stopBits) == 0:
+        if int(self.stopBits) == 0:
             cflag &= ~(termios.CSTOPB)
         else:
             cflag |= (termios.CSTOPB)
         # setup parity
         iflag &= ~(termios.INPCK | termios.ISTRIP)
-        p = int(self._parity)
+        p = int(self.parity)
         if p == 0: #Parity.NONE
             cflag &= ~(termios.PARENB | termios.PARODD | _CMSPAR)
         elif p == 2: #Parity.PARITY_EVEN
@@ -260,17 +262,17 @@ class GXLinuxHandler(GXSettings, IGXNative):
             raise Exception("setParity failed. " + str(e))
 
         iflag &= ~(termios.INPCK | termios.ISTRIP)
-        if self._parity == 0: #Parity.NONE:
+        if self.parity == 0: #Parity.NONE:
             cflag &= ~(termios.PARENB | termios.PARODD | _CMSPAR)
-        elif self._parity == 2:#Parity.EVEN:
+        elif self.parity == 2:#Parity.EVEN:
             cflag &= ~(termios.PARODD | _CMSPAR)
             cflag |= (termios.PARENB)
-        elif self._parity == 1: #Parity.ODD:
+        elif self.parity == 1: #Parity.ODD:
             cflag &= ~_CMSPAR
             cflag |= (termios.PARENB | termios.PARODD)
-        elif self._parity == 3 and _CMSPAR: #Parity.MARK
+        elif self.parity == 3 and _CMSPAR: #Parity.MARK
             cflag |= (termios.PARENB | _CMSPAR | termios.PARODD)
-        elif self._parity == 4 and _CMSPAR: #Parity.SPACE
+        elif self.parity == 4 and _CMSPAR: #Parity.SPACE
             cflag |= (termios.PARENB | _CMSPAR)
             cflag &= ~(termios.PARODD)
         # Set tty attributes
@@ -314,9 +316,9 @@ class GXLinuxHandler(GXSettings, IGXNative):
         value : Is serial port in break state.
         """
         if value:
-            fcntl.ioctl(self.fd, TIOCSBRK)
+            fcntl.ioctl(self.h, _TIOCSBRK)
         else:
-            fcntl.ioctl(self.fd, TIOCCBRK)
+            fcntl.ioctl(self.h, _TIOCCBRK)
 
 
     def getRtsEnable(self):
@@ -334,7 +336,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         value: Is RTS set.
         """
         tmp = struct.pack('I', 4)
-        if self._rts_state:
+        if value:
             fcntl.ioctl(self.h, 0x5416, tmp)
         else:
             fcntl.ioctl(self.h, 0x5417, tmp)
@@ -368,17 +370,17 @@ class GXLinuxHandler(GXSettings, IGXNative):
         """
         Returns amount of bytes to read.
         """
-        buffer = array.array('I', [0])
-        fcntl.ioctl(self.h, termios.TIOCINQ, buffer, True)
-        return buffer[0]
+        buf = array.array('I', [0])
+        fcntl.ioctl(self.h, termios.TIOCINQ, buf, True)
+        return buf[0]
 
     def getBytesToWrite(self):
         """
         Returns amount of bytes to write.
         """
-        buffer = array.array('I', [0])
-        fcntl.ioctl(self.h, termios.TIOCOUTQ, buffer, True)
-        return buffer[0]
+        buf = array.array('I', [0])
+        fcntl.ioctl(self.h, termios.TIOCOUTQ, buf, True)
+        return buf[0]
 
     def read(self):
         """Read data from serial port to the buffer."""
@@ -387,7 +389,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
             return None
         cnt = self.getBytesToRead()
         ret = os.read(self.h, cnt)
-        return bytearray(ret)
+        return ret
 
     def write(self, data):
         """Write data to the serial port."""
