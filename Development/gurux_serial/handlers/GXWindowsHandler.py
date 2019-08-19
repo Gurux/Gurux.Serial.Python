@@ -170,7 +170,11 @@ WriteFile = _stdcall_libraries['kernel32'].WriteFile
 WriteFile.restype = ctypes.wintypes.BOOL
 LPOVERLAPPED = ctypes.POINTER(OVERLAPPED)
 # pylint: disable=no-member
-WriteFile.argtypes = [ctypes.wintypes.HANDLE, ctypes.wintypes.LPCVOID, ctypes.wintypes.DWORD, ctypes.wintypes.LPDWORD, LPOVERLAPPED]
+
+#LPDWORD is missing from older ctypes.wintypes.
+LPDWORD = ctypes.POINTER(ctypes.DWORD)
+
+WriteFile.argtypes = [ctypes.wintypes.HANDLE, ctypes.wintypes.LPCVOID, ctypes.wintypes.DWORD, LPDWORD, LPOVERLAPPED]
 
 # pylint: disable=too-many-public-methods,too-many-instance-attributes
 class GXWindowsHandler(GXSettings, IGXNative):

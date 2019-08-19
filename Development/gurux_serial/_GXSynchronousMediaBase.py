@@ -283,19 +283,16 @@ class _GXSynchronousMediaBase:
     #Convert value to bytes.
     @classmethod
     def toBytes(cls, value):
-        if isinstance(value, bytes):
+        if isinstance(value, bytearray):
             pass
         elif isinstance(value, str):
-            value = value.encode()
-        elif isinstance(value, (bytearray, list)):
-            value = bytes(value)
+            value = bytearray(value.encode())
+        elif isinstance(value, (bytes, list)):
+            value = bytearray(value)
         elif isinstance(value, memoryview):
-            value = value.tobytes()
+            value = bytearray(value.tobytes())
         elif isinstance(value, int):
-            value = bytes([value])
-        elif isinstance(value, int):
+            value = bytearray([value])
+        else:
             raise ValueError("Invalid data value.")
-        #Python 2.7 can't compare bytes if value is not ascii.
-        if sys.version_info < (3, 0) and not isinstance(value, bytearray):
-            return bytearray(value)
         return value

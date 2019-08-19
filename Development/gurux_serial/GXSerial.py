@@ -216,10 +216,12 @@ class GXSerial(IGXMedia):
             try:
                 data = self.__h.read()
                 if data:
-                    data = _GXSynchronousMediaBase.toBytes(data)
+                    #Convert data to bytearray because 2.7 handles bytes as a string.
+                    #This is causing problems with non-ascii chars.
+                    data = bytearray(data)
                     self.__handleReceivedData(data, self.__portName)
             except Exception as ex:
-                #traceback.print_exc()
+                traceback.print_exc()
                 pass
 
     def open(self):
