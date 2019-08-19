@@ -172,7 +172,7 @@ LPOVERLAPPED = ctypes.POINTER(OVERLAPPED)
 # pylint: disable=no-member
 
 #LPDWORD is missing from older ctypes.wintypes.
-LPDWORD = ctypes.POINTER(ctypes.DWORD)
+LPDWORD = ctypes.POINTER(ctypes.wintypes.DWORD)
 
 WriteFile.argtypes = [ctypes.wintypes.HANDLE, ctypes.wintypes.LPCVOID, ctypes.wintypes.DWORD, LPDWORD, LPOVERLAPPED]
 
