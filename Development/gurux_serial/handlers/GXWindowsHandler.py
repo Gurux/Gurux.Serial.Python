@@ -236,15 +236,15 @@ class GXWindowsHandler(GXSettings, IGXNative):
             raise Exception("Serial port is not open")
 
         dcb = self.__getCommState()
-        dcb.BaudRate = self._baudrate
-        dcb.ByteSize = self._dataBits
-        dcb.Parity = self._parity
+        dcb.BaudRate = self.baudrate
+        dcb.ByteSize = self.dataBits
+        dcb.Parity = self.parity
         # Disable Parity Check
         if dcb.Parity == 0:
             dcb.fParity = 0
         else:
             dcb.fParity = 1
-        dcb.StopBits = self._stopBits
+        dcb.StopBits = self.stopBits
         dcb.fBinary = 1
         dcb.fNull = 0
         dcb.fErrorChar = 0
@@ -285,12 +285,12 @@ class GXWindowsHandler(GXSettings, IGXNative):
             self.__updateSettings()
             #Clear buffers.
             ctypes.windll.Kernel32.PurgeComm(self.h, PURGE_TXCLEAR | PURGE_TXABORT | PURGE_RXCLEAR | PURGE_RXABORT)
-        except:
+        except Exception as e:
             try:
                 self.close()
             except:
                 pass
-            raise
+            raise e
 
     def isOpen(self):
         return self.h != INVALID_HANDLE_VALUE

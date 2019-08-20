@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="gurux_serial",
-    version="1.0.7",
+    version="1.0.8",
     author="Gurux Ltd",
     author_email="gurux@gurux.org",
     description="Gurux serial media is used to commmunication with serial port connections.",
