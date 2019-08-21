@@ -220,9 +220,9 @@ class GXSerial(IGXMedia):
                     #This is causing problems with non-ascii chars.
                     data = bytearray(data)
                     self.__handleReceivedData(data, self.__portName)
-            except Exception as ex:
-                traceback.print_exc()
-                pass
+            except Exception:
+                if not self.__closing.isSet():
+                    traceback.print_exc()
 
     def open(self):
         self.close()

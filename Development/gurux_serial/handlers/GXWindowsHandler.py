@@ -32,6 +32,7 @@
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
 import ctypes
+import ctypes.wintypes
 import threading
 from .GXSettings import GXSettings
 from .IGXNative import IGXNative
