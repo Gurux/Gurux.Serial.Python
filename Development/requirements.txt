@@ -1,1 +1,1 @@
-gurux-common==1.0.11
+gurux-common==1.0.12
