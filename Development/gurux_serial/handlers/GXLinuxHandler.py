@@ -146,6 +146,11 @@ class GXLinuxHandler(GXSettings, IGXNative):
         elif p == 4 and _CMSPAR:#Parity.SPACE
             cflag |= (termios.PARENB | _CMSPAR)
             cflag &= ~(termios.PARODD)
+
+        #xonxoff off
+        iflag &= ~(termios.IXON | termios.IXOFF)
+        # rtscts
+        cflag &= ~(termios.CRTSCTS)
         termios.tcsetattr(self.h, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
         #Clear imput buffer.
         termios.tcflush(self.h, termios.TCIFLUSH)
@@ -388,8 +393,14 @@ class GXLinuxHandler(GXSettings, IGXNative):
         if self.__closedR in ready:
             return None
         cnt = self.getBytesToRead()
+        if cnt == 0:
+            cnt = 1
         ret = os.read(self.h, cnt)
-        return ret
+        if ret is None:
+            return None
+        if isinstance(ret, int):
+            return bytearray([ret])
+        return bytearray(ret)
 
     def write(self, data):
         """Write data to the serial port."""

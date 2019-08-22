@@ -32,6 +32,7 @@
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
 import os
+import time
 import threading
 import traceback
 import gurux_common.io.BaudRate
@@ -163,16 +164,7 @@ class GXSerial(IGXMedia):
         with self.__syncBase.getSync():
             self.__syncBase.resetLastPosition()
 
-        if isinstance(data, str):
-            data = data.encode()
-        elif isinstance(data, (bytearray, list)):
-            data = bytes(data)
-        elif isinstance(data, memoryview):
-            data = data.tobytes()
-        elif isinstance(data, int):
-            data = bytes([data])
-        else:
-            raise ValueError("Invalid data value.")
+        data = _GXSynchronousMediaBase.toBytes(data)
         self.__h.write(data)
         self.__bytesSent += len(data)
 
@@ -185,8 +177,6 @@ class GXSerial(IGXMedia):
 
     #Handle received data.
     def __handleReceivedData(self, buff, info):
-        if not buff:
-            return
         self.__bytesReceived += len(buff)
         totalCount = 0
         if self.getIsSynchronous():
@@ -215,11 +205,10 @@ class GXSerial(IGXMedia):
         while not self.__closing.isSet():
             try:
                 data = self.__h.read()
-                if data:
-                    #Convert data to bytearray because 2.7 handles bytes as a string.
-                    #This is causing problems with non-ascii chars.
-                    data = bytearray(data)
+                if data is not None:
                     self.__handleReceivedData(data, self.__portName)
+                    #Give some time before read next bytes. In this way we are not reading data one byte at the time.
+                    time.sleep(0.1)
             except Exception:
                 if not self.__closing.isSet():
                     traceback.print_exc()

@@ -468,8 +468,7 @@ class GXWindowsHandler(GXSettings, IGXNative):
             if ctypes.windll.Kernel32.GetOverlappedResult(self.h, ctypes.byref(self._overlapped_read), ctypes.byref(c), True) == 0:
                 if ctypes.windll.Kernel32.GetLastError() != ERROR_OPERATION_ABORTED:
                     raise Exception("Read failed  ({!r})".format(ctypes.WinError()))
-        read = buf.raw[:c.value]
-        return bytes(read)
+        return bytearray(buf.raw[:c.value])
 
     def write(self, data):
         """Write data to the serial port."""
