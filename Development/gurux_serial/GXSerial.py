@@ -46,9 +46,9 @@ from gurux_common.PropertyChangedEventArgs import PropertyChangedEventArgs
 from gurux_common.ReceiveEventArgs import ReceiveEventArgs
 from ._GXSynchronousMediaBase import _GXSynchronousMediaBase
 if os.name == 'nt':  # sys.platform == 'win32':
-    from .handlers.GXWindowsHandler import GXWindowsHandler
+    from ._handlers.GXWindowsHandler import GXWindowsHandler
 elif os.name == 'posix':
-    from .handlers.GXLinuxHandler import GXLinuxHandler
+    from ._handlers.GXLinuxHandler import GXLinuxHandler
 
 # pylint: disable=too-many-public-methods, too-many-instance-attributes, too-many-arguments
 class GXSerial(IGXMedia):

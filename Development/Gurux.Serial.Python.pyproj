@@ -25,19 +25,19 @@
     <Compile Include="gurux_serial\GXSerial.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="gurux_serial\handlers\GXLinuxHandler.py" />
-    <Compile Include="gurux_serial\handlers\GXSettings.py" />
-    <Compile Include="gurux_serial\handlers\IGXNative.py" />
-    <Compile Include="gurux_serial\handlers\GXWindowsHandler.py" />
-    <Compile Include="gurux_serial\handlers\__init__.py" />
     <Compile Include="gurux_serial\_GXSynchronousMediaBase.py" />
+    <Compile Include="gurux_serial\_handlers\GXLinuxHandler.py" />
+    <Compile Include="gurux_serial\_handlers\GXSettings.py" />
+    <Compile Include="gurux_serial\_handlers\GXWindowsHandler.py" />
+    <Compile Include="gurux_serial\_handlers\IGXNative.py" />
+    <Compile Include="gurux_serial\_handlers\__init__.py" />
     <Compile Include="gurux_serial\__init__.py" />
     <Compile Include="example.py" />
     <Compile Include="setup.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="gurux_serial\" />
-    <Folder Include="gurux_serial\handlers\" />
+    <Folder Include="gurux_serial\_handlers\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="requirements.txt" />
