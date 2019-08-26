@@ -50,7 +50,8 @@ if os.name == 'nt':  # sys.platform == 'win32':
 elif os.name == 'posix':
     from ._handlers.GXLinuxHandler import GXLinuxHandler
 
-# pylint: disable=too-many-public-methods, too-many-instance-attributes, too-many-arguments
+# pylint: disable=too-many-public-methods, too-many-instance-attributes,
+# too-many-arguments
 class GXSerial(IGXMedia):
     def __init__(self,
                  port,
@@ -164,7 +165,8 @@ class GXSerial(IGXMedia):
         with self.__syncBase.getSync():
             self.__syncBase.resetLastPosition()
 
-        data = _GXSynchronousMediaBase.toBytes(data)
+        if not isinstance(data, bytes):
+            data = bytes(_GXSynchronousMediaBase.toBytes(data))
         self.__h.write(data)
         self.__bytesSent += len(data)
 
@@ -207,7 +209,8 @@ class GXSerial(IGXMedia):
                 data = self.__h.read()
                 if data is not None:
                     self.__handleReceivedData(data, self.__portName)
-                    #Give some time before read next bytes. In this way we are not reading data one byte at the time.
+                    #Give some time before read next bytes.  In this way we are
+                    #not reading data one byte at the time.
                     time.sleep(0.1)
             except Exception:
                 if not self.__closing.isSet():
@@ -226,7 +229,7 @@ class GXSerial(IGXMedia):
             eopString = str(self.eop)
             self.__notifyTrace(TraceEventArgs(TraceTypes.INFO,\
                 "Settings: Port: " + self.__portName + " Baud Rate: " + str(self.baudRate) + \
-                " Data Bits: " + str(int(self.dataBits)) + " Parity: " + str(self.parity) +\
+                " Data Bits: " + str(int(self.dataBits)) + " Parity: " + str(self.parity) + \
                " Stop Bits: " + str(self.stopBits) + " Eop:" + eopString))
 
         self.__h.open(self.__portName)

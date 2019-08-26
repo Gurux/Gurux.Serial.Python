@@ -164,7 +164,8 @@ class DCB(ctypes.Structure):
     ('EvtChar', ctypes.c_char),\
     ('wReserved1', ctypes.wintypes.WORD),]
 
-#ctypes.windll.kernel32.WriteFile don't work for all Windows versions for some reason.
+#ctypes.windll.kernel32.WriteFile don't work for all Windows versions for some
+#reason.
 _stdcall_libraries = {}
 _stdcall_libraries['kernel32'] = ctypes.WinDLL('kernel32')
 WriteFile = _stdcall_libraries['kernel32'].WriteFile
@@ -252,8 +253,8 @@ class GXWindowsHandler(GXSettings, IGXNative):
         dcb.fAbortOnError = 0
         dcb.XonChar = XON
         dcb.XoffChar = XOFF
-        dcb.fRtsControl = 1
-        dcb.fDtrControl = 1
+        dcb.fRtsControl = RTS_CONTROL_DISABLE
+        dcb.fDtrControl = DTR_CONTROL_DISABLE
         if not ctypes.windll.Kernel32.SetCommState(self.h, ctypes.byref(dcb)):
             raise Exception('Failed to set serial port settings: {!r}'.format(ctypes.WinError()))
 
@@ -512,7 +513,7 @@ class GXWindowsHandler(GXSettings, IGXNative):
         dcb = self.__getCommState()
         #Disable DTR monitoring
         #Disable RTS (Ready To Send)
-        if dcb.fDtrControl == DTR_CONTROL_DISABLE and dcb.fRtsControl == DTR_CONTROL_DISABLE:
+        if dcb.fDtrControl == DTR_CONTROL_DISABLE and dcb.fRtsControl == RTS_CONTROL_DISABLE:
             #Enable XON/XOFF for transmission
             #Enable XON/XOFF for receiving
             if dcb.fOutX and dcb.fInX:
@@ -536,25 +537,25 @@ class GXWindowsHandler(GXSettings, IGXNative):
         if value == 0:
             dcb.fDtrControl = DTR_CONTROL_DISABLE
             #Disable RTS (Ready To Send)
-            dcb.fRtsControl = DTR_CONTROL_DISABLE
+            dcb.fRtsControl = RTS_CONTROL_DISABLE
             dcb.fOutX = dcb.fInX = 0
         #XOnXOff
         elif value == 1:
             dcb.fDtrControl = DTR_CONTROL_DISABLE
             #Disable RTS (Ready To Send)
-            dcb.fRtsControl = DTR_CONTROL_DISABLE
+            dcb.fRtsControl = RTS_CONTROL_DISABLE
             dcb.fOutX = dcb.fInX = 1
         #hardware flow control is used.
         elif value == 2:
             dcb.fDtrControl = DTR_CONTROL_ENABLE
             #Disable RTS (Ready To Send)
-            dcb.fRtsControl = DTR_CONTROL_ENABLE
+            dcb.fRtsControl = RTS_CONTROL_ENABLE
             dcb.fOutX = dcb.fInX = 0
         #RequestToSendXOnXOff
         elif value == 3:
             dcb.fDtrControl = DTR_CONTROL_ENABLE
             #Disable RTS (Ready To Send)
-            dcb.fRtsControl = DTR_CONTROL_ENABLE
+            dcb.fRtsControl = RTS_CONTROL_ENABLE
             dcb.fOutX = dcb.fInX = 1
         if ctypes.windll.Kernel32.SetCommState(self.h, ctypes.byref(dcb)) == 0:
             raise Exception("Failed to set comm state.")
