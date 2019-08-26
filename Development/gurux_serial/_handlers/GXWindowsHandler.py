@@ -186,8 +186,12 @@ class GXWindowsHandler(GXSettings, IGXNative):
         self.h = INVALID_HANDLE_VALUE
         self._overlapped_read = None
         self._overlapped_write = None
-        self._closing = ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0)
+        self.__unicode = None
         self.__closed = threading.Event()
+        if self.isUnicode():
+            self._closing = ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0)
+        else:
+            self._closing = ctypes.windll.Kernel32.CreateEventA(0, 0, 0, 0)
 
     def __del__(self):
         """Destructor."""
@@ -195,13 +199,30 @@ class GXWindowsHandler(GXSettings, IGXNative):
             ctypes.windll.Kernel32.CloseHandle(self._closing)
             self._closing = INVALID_HANDLE_VALUE
 
+    def isUnicode(self):
+        ##Check is UNICODE or ASCII versions used.
+        if self.__unicode is None:
+            try:
+                _stdcall_libraries['kernel32'].CreateEventW
+                self.__unicode = True
+            except AttributeError:
+                self.__unicode = False
+        return self.__unicode
+
     def getPortNames(self):
         """Returns available serial ports."""
         #Use RegOpenKeyEx() with the new Registry path to get an open handle
         #to the child key you want to enumerate.
         hKey = ctypes.wintypes.HKEY()
-        ret = ctypes.windll.Kernel32.RegOpenKeyExW(HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\SERIALCOMM", \
-            0, KEY_ENUMERATE_SUB_KEYS | KEY_EXECUTE | KEY_QUERY_VALUE, ctypes.byref(hKey))
+        if self.isUnicode():
+            ret = ctypes.windll.Kernel32.RegOpenKeyExW(HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\SERIALCOMM", \
+                0, KEY_ENUMERATE_SUB_KEYS | KEY_EXECUTE | KEY_QUERY_VALUE, ctypes.byref(hKey))
+        else:
+            ret = ctypes.windll.Kernel32.RegOpenKeyExA(HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\SERIALCOMM", \
+                0, KEY_ENUMERATE_SUB_KEYS | KEY_EXECUTE | KEY_QUERY_VALUE, ctypes.byref(hKey))
+        #If there are no serial ports installed.
+        if ret == 2:
+            return []
         if ret != 0:
             raise Exception('Failed to get port names: {!r}'.format(ctypes.WinError(ret)))
 
@@ -213,7 +234,10 @@ class GXWindowsHandler(GXSettings, IGXNative):
         pos = 0
         ports = []
         while pos < 100:
-            ret = ctypes.windll.Kernel32.RegEnumValueW(hKey, pos, valueName, ctypes.byref(dwcValueName), None, ctypes.byref(dwType), deviceName, ctypes.byref(cbData))
+            if self.isUnicode():
+                ret = ctypes.windll.Kernel32.RegEnumValueW(hKey, pos, valueName, ctypes.byref(dwcValueName), None, ctypes.byref(dwType), deviceName, ctypes.byref(cbData))
+            else:
+                ret = ctypes.windll.Kernel32.RegEnumValueA(hKey, pos, valueName, ctypes.byref(dwcValueName), None, ctypes.byref(dwType), deviceName, ctypes.byref(cbData))
             if ret != 0:
                 break
             ports.append(deviceName.value)
@@ -269,21 +293,34 @@ class GXWindowsHandler(GXSettings, IGXNative):
         if not port:
             raise Exception("Invalid serial port name.")
         # Open the file for writing.
-        self.h = ctypes.windll.Kernel32.CreateFileW('\\\\.\\' + port, GENERIC_READ | GENERIC_WRITE,
-                                                    0,  # exclusive access
-                                                    None,  # no security
-                                                    OPEN_EXISTING,
-                                                    FILE_FLAG_OVERLAPPED,
-                                                    0)
+        if self.isUnicode():
+            self.h = ctypes.windll.Kernel32.CreateFileW('\\\\.\\' + port, GENERIC_READ | GENERIC_WRITE,
+                                                        0,  # exclusive access
+                                                        None,  # no security
+                                                        OPEN_EXISTING,
+                                                        FILE_FLAG_OVERLAPPED,
+                                                        0)
+        else:
+            self.h = ctypes.windll.Kernel32.CreateFileA('\\\\.\\' + port, GENERIC_READ | GENERIC_WRITE,
+                                                        0,  # exclusive access
+                                                        None,  # no security
+                                                        OPEN_EXISTING,
+                                                        FILE_FLAG_OVERLAPPED,
+                                                        0)
+
         if self.h == INVALID_HANDLE_VALUE:
             ret = ctypes.windll.Kernel32.GetLastError()
-            raise Exception("Failed to open port {!r}: {!r}".format(port, ctypes.WinError(ret)))
+            raise Exception("Failed to open port {!r}: {!r}".format(port, str(ctypes.WinError(ret))))
         try:
-            self._overlapped_read = OVERLAPPED(hEvent=ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0))
-            self._overlapped_write = OVERLAPPED(hEvent=ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0))
+            if self.isUnicode():
+                self._overlapped_read = OVERLAPPED(hEvent=ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0))
+                self._overlapped_write = OVERLAPPED(hEvent=ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0))
+            else:
+                self._overlapped_read = OVERLAPPED(hEvent=ctypes.windll.Kernel32.CreateEventA(0, 0, 0, 0))
+                self._overlapped_write = OVERLAPPED(hEvent=ctypes.windll.Kernel32.CreateEventA(0, 0, 0, 0))
             if ctypes.windll.Kernel32.ResetEvent(self._closing) == 0:
                 ret = ctypes.windll.Kernel32.GetLastError()
-                raise Exception('Failed to open port: {!r}'.format(ctypes.WinError(ret)))
+                raise Exception("Failed to open port {!r}: {!r}".format(port, str(ctypes.WinError(ret))))
             self.__updateSettings()
             #Clear buffers.
             ctypes.windll.Kernel32.PurgeComm(self.h, PURGE_TXCLEAR | PURGE_TXABORT | PURGE_RXCLEAR | PURGE_RXABORT)
