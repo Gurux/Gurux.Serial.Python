@@ -405,7 +405,6 @@ class GXLinuxHandler(GXSettings, IGXNative):
     def write(self, data):
         """Write data to the serial port."""
         ret = os.write(self.h, data)
-        termios.tcflush(self.h, termios.TCOFLUSH)
         return ret
 
     def getCtsHolding(self):
