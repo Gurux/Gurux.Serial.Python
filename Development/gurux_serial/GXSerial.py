@@ -479,3 +479,7 @@ class GXSerial(IGXMedia):
 
     def setAsyncWaitTime(self, value):
         self.__asyncWaitTime = value
+
+    def __str__(self):
+        return self.__portName + ":" + str(int(self.__h.baudRate)) + " " +\
+            str(self.__h.dataBits) + str(self.__h.parity.name) + str(int(self.__h.stopBits) + 1)

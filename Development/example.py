@@ -50,6 +50,7 @@ class sampleclient(IGXMediaListener):
         eop = '\r'
         #Make connection using serial port.
         media = GXSerial("COM10")
+        print(str(media))
         #Start to listen events from the media.
         media.addListener(self)
         #Update port here to call onPropertyChanged event.
