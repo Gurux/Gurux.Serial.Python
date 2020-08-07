@@ -262,7 +262,7 @@ class GXWindowsHandler(GXSettings, IGXNative):
             raise Exception("Serial port is not open")
 
         dcb = self.__getCommState()
-        dcb.BaudRate = self.baudrate
+        dcb.BaudRate = self.baudRate
         dcb.ByteSize = self.dataBits
         dcb.Parity = self.parity
         # Disable Parity Check

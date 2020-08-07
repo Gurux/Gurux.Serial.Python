@@ -113,8 +113,8 @@ class GXLinuxHandler(GXSettings, IGXNative):
         oflag &= ~(termios.OPOST | termios.ONLCR | termios.OCRNL)
         iflag &= ~(termios.INLCR | termios.IGNCR | termios.ICRNL | termios.IGNBRK)
         #Baud rate
-        ispeed = _BAUDRATE_CONSTANTS[int(self.baudrate)]
-        ospeed = _BAUDRATE_CONSTANTS[int(self.baudrate)]
+        ispeed = _BAUDRATE_CONSTANTS[int(self.baudRate)]
+        ospeed = _BAUDRATE_CONSTANTS[int(self.baudRate)]
         #Databits
         cflag &= ~termios.CSIZE
         if self.dataBits == 8:
