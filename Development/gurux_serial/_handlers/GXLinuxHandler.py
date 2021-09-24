@@ -180,7 +180,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (_, _, _, _, _, rate, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getBaudRate failed. " + str(e))
+            raise Exception("getBaudRate failed. ") from e
         for k, v in _BAUDRATE_CONSTANTS.items():
             if v == rate:
                 return k
@@ -193,7 +193,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("setBaudRate failed. " + str(e))
+            raise Exception("setBaudRate failed. ") from e
         cflag &= ~(termios.CBAUD | termios.CBAUDEX)
         cflag |= _BAUDRATE_CONSTANTS[value]
         ispeed = _BAUDRATE_CONSTANTS[value]
@@ -201,7 +201,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             termios.tcsetattr(self.h, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
         except termios.error as e:
-            raise Exception("setBaudRate failed. " + str(e))
+            raise Exception("setBaudRate failed. ") from e
 
     def getDataBits(self):
         """
@@ -210,7 +210,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (_, _, cflag, _, _, _, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getDataBits failed. " + str(e))
+            raise Exception("getDataBits failed. ") from e
 
         cs = cflag & termios.CSIZE
         for k, v in _DATABITS_TO_CFLAG.items():
@@ -226,13 +226,13 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("setDataBits failed. " + str(e))
+            raise Exception("setDataBits failed. ") from e
         cflag &= ~termios.CSIZE
         cflag |= _DATABITS_TO_CFLAG[value]
         try:
             termios.tcsetattr(self.h, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
         except termios.error as e:
-            raise Exception("setDataBits failed. " + str(e))
+            raise Exception("setDataBits failed. ") from e
 
     def getParity(self):
         """Get parity.
@@ -240,7 +240,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (_, _, cflag, _, _, _, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getParity failed. " + str(e))
+            raise Exception("getParity failed. ") from e
         #Parity.MARK
         if (cflag & (termios.PARENB | _CMSPAR | termios.PARODD)) == (termios.PARENB | _CMSPAR | termios.PARODD):
             return 3
@@ -264,7 +264,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("setParity failed. " + str(e))
+            raise Exception("setParity failed. ") from e
 
         iflag &= ~(termios.INPCK | termios.ISTRIP)
         if self.parity == 0: #Parity.NONE:
@@ -284,7 +284,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             termios.tcsetattr(self.h, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
         except termios.error as e:
-            raise Exception("setParity failed. " + str(e))
+            raise Exception("setParity failed. ") from e
 
     def getStopBits(self):
         """
@@ -293,7 +293,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (_, _, cflag, _, _, _, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getStopBits failed. " + str(e))
+            raise Exception("getStopBits failed. ") from e
         if cflag & termios.CSTOPB != 0:
             return 1
         return 0
@@ -306,14 +306,14 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("setStopBits failed. " + str(e))
+            raise Exception("setStopBits failed. ") from e
         cflag &= ~termios.CSTOPB
         if value == 1:
             cflag |= termios.CSTOPB
         try:
             termios.tcsetattr(self.h, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
         except termios.error as e:
-            raise Exception("setStopBits failed. " + str(e))
+            raise Exception("setStopBits failed. ") from e
 
     def setBreakState(self, value):
         """
@@ -333,7 +333,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (_, _, cflag, _, _, _, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getCtsHolding failed. " + str(e))
+            raise Exception("getCtsHolding failed. ") from e
         return (cflag & termios.CRTSCTS) != 0
 
     def setRtsEnable(self, value):
@@ -353,7 +353,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (_, _, cflag, _, _, _, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getCtsHolding failed. " + str(e))
+            raise Exception("getCtsHolding failed. ") from e
         return cflag & termios.CRTSCTS != 0
 
     def setDtrEnable(self, value):
@@ -412,7 +412,7 @@ class GXLinuxHandler(GXSettings, IGXNative):
         try:
             (_, _, cflag, _, _, _, _) = termios.tcgetattr(self.h)
         except termios.error as e:
-            raise Exception("getCtsHolding failed. " + str(e))
+            raise Exception("getCtsHolding failed. ") from e
         return cflag & termios.CRTSCTS != 0
 
     def getCDHolding(self):

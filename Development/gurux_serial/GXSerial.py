@@ -212,7 +212,15 @@ class GXSerial(IGXMedia):
                     #Give some time before read next bytes.  In this way we are
                     #not reading data one byte at the time.
                     time.sleep(0.1)
-            except Exception:
+            except Exception as ex:
+                #If serial port is removed.
+                if not self.isOpen():
+                    self.__closing.set()
+                    self.__notifyMediaStateChange(MediaState.CLOSED)
+                    self.__bytesSent = 0
+                    self.__syncBase.exception = ex
+                    self.__syncBase.resetReceivedSize()
+                    self.__syncBase.setReceived()
                 if not self.__closing.isSet():
                     traceback.print_exc()
 

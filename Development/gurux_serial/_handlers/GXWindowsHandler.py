@@ -450,7 +450,13 @@ class GXWindowsHandler(GXSettings, IGXNative):
         else:
             tmp = ctypes.wintypes.DWORD(CLRDTR)
         if ctypes.windll.Kernel32.EscapeCommFunction(self.h, tmp) == 0:
-            raise Exception("Read failed ({!r})".format(ctypes.WinError()))
+            err_ = ctypes.WinError();
+            #Serial port is removed.
+            if isinstance(err_, PermissionError):
+                self.__closed.set()
+                self.close()
+                raise err_
+            raise Exception("setDtrEnable failed ({!r})".format(err_))
 
     def getDsrHolding(self):
         """
@@ -459,7 +465,13 @@ class GXWindowsHandler(GXSettings, IGXNative):
         flags = ctypes.wintypes.DWORD()
         comstat = COMSTAT()
         if not ctypes.windll.Kernel32.ClearCommError(self.h, ctypes.byref(flags), ctypes.byref(comstat)):
-            raise Exception("ClearCommError failed ({!r})".format(ctypes.WinError()))
+            err_ = ctypes.WinError();
+            #Serial port is removed.
+            if isinstance(err_, PermissionError):
+                self.__closed.set()
+                self.close()
+                raise err_
+            raise Exception("getDsrHolding failed ({!r})".format(err_))
         return comstat.fDsrHold != 0
 
     def getBytesToRead(self):
@@ -469,7 +481,13 @@ class GXWindowsHandler(GXSettings, IGXNative):
         flags = ctypes.wintypes.DWORD()
         comstat = COMSTAT()
         if not ctypes.windll.Kernel32.ClearCommError(self.h, ctypes.byref(flags), ctypes.byref(comstat)):
-            raise Exception("ClearCommError failed ({!r})".format(ctypes.WinError()))
+            err_ = ctypes.WinError();
+            #Serial port is removed.
+            if isinstance(err_, PermissionError):
+                self.__closed.set()
+                self.close()
+                raise err_
+            raise Exception("getBytesToRead failed ({!r})".format(err_))
         return comstat.cbInQue
 
     def getBytesToWrite(self):
@@ -479,7 +497,13 @@ class GXWindowsHandler(GXSettings, IGXNative):
         flags = ctypes.wintypes.DWORD()
         comstat = COMSTAT()
         if not ctypes.windll.ClearCommError(self.h, ctypes.byref(flags), ctypes.byref(comstat)):
-            raise Exception("ClearCommError failed ({!r})".format(ctypes.WinError()))
+            err_ = ctypes.WinError();
+            #Serial port is removed.
+            if isinstance(err_, PermissionError):
+                self.__closed.set()
+                self.close()
+                raise err_
+            raise Exception("getBytesToWrite failed ({!r})".format(err_))
         return comstat.cbOutQue
 
     def read(self):

@@ -193,7 +193,7 @@ class _GXSynchronousMediaBase:
                     isReceived = self.__receivedEvent.wait(waitTime / 1000)
                 self.__receivedEvent.clear()
             if self.exception:
-                raise Exception(self.exception)
+                raise self.exception
             #If timeout occurred.
             if not isReceived:
                 #If we want to read all data.
