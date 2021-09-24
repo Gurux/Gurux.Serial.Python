@@ -189,10 +189,10 @@ class GXSerial(IGXMedia):
                 if self.eop:
                     tmp = _GXSynchronousMediaBase.toBytes(self.eop)
                     totalCount = _GXSynchronousMediaBase.indexOf(buff, tmp, 0, len(buff))
-                    if totalCount != -1:
-                        if self.trace == TraceLevel.VERBOSE:
-                            arg = TraceEventArgs(TraceTypes.RECEIVED, buff, 0, totalCount + 1)
-                        self.__syncBase.setReceived()
+                if totalCount != -1:
+                    if self.trace == TraceLevel.VERBOSE:
+                        arg = TraceEventArgs(TraceTypes.RECEIVED, buff, 0, totalCount + 1)
+                    self.__syncBase.setReceived()
             if arg:
                 self.__notifyTrace(arg)
         else:
