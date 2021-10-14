@@ -95,9 +95,11 @@ class GXSerial(IGXMedia):
         self.__closing = threading.Event()
         self.__lock = threading.Lock()
 
+    #pylint: disable=unused-private-member
     def __getTrace(self):
         return self.__trace
 
+    #pylint: disable=unused-private-member
     def __setTrace(self, value):
         self.__trace = value
         self.__syncBase.trace = value
@@ -312,9 +314,11 @@ class GXSerial(IGXMedia):
         """"Gets the state of the Data Set Ready (DSR) signal."""
         return self.__h.getDsrHolding()
 
+    #pylint: disable=unused-private-member
     def __getDtrEnable(self):
         return self.__h.getDtrEnable()
 
+    #pylint: disable=unused-private-member
     def __setDtrEnable(self, value):
         self.__h.setDtrEnable(value)
 

@@ -33,7 +33,6 @@
 # ---------------------------------------------------------------------------
 import ctypes
 import ctypes.wintypes
-import threading
 from .GXSettings import GXSettings
 from .IGXNative import IGXNative
 
@@ -180,14 +179,15 @@ WriteFile.argtypes = [ctypes.wintypes.HANDLE, ctypes.wintypes.LPCVOID, ctypes.wi
 
 # pylint: disable=too-many-public-methods,too-many-instance-attributes
 class GXWindowsHandler(GXSettings, IGXNative):
+    #is Windows unicode.
+    __unicode = None
+
     def __init__(self):
         """Constructor."""
         GXSettings.__init__(self)
         self.h = INVALID_HANDLE_VALUE
         self._overlapped_read = None
         self._overlapped_write = None
-        self.__unicode = None
-        self.__closed = threading.Event()
         if self.isUnicode():
             self._closing = ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0)
         else:
@@ -201,13 +201,14 @@ class GXWindowsHandler(GXSettings, IGXNative):
 
     def isUnicode(self):
         ##Check is UNICODE or ASCII versions used.
-        if self.__unicode is None:
+        if GXWindowsHandler.__unicode is None:
             try:
-                _stdcall_libraries['kernel32'].CreateEventW
-                self.__unicode = True
+                h = _stdcall_libraries['kernel32'].CreateEventW(0, 0, 0, 0)
+                ctypes.windll.Kernel32.CloseHandle(h)
+                GXWindowsHandler.__unicode = True
             except AttributeError:
-                self.__unicode = False
-        return self.__unicode
+                GXWindowsHandler.__unicode = False
+        return GXWindowsHandler.__unicode
 
     def getPortNames(self):
         """Returns available serial ports."""
@@ -340,7 +341,6 @@ class GXWindowsHandler(GXSettings, IGXNative):
         """
         if self.h != INVALID_HANDLE_VALUE:
             ctypes.windll.Kernel32.SetEvent(self._closing)
-            self.__closed.wait()
             if self._overlapped_read:
                 ctypes.windll.Kernel32.CloseHandle(self._overlapped_read.hEvent)
                 self._overlapped_read = None
@@ -450,10 +450,9 @@ class GXWindowsHandler(GXSettings, IGXNative):
         else:
             tmp = ctypes.wintypes.DWORD(CLRDTR)
         if ctypes.windll.Kernel32.EscapeCommFunction(self.h, tmp) == 0:
-            err_ = ctypes.WinError();
+            err_ = ctypes.WinError()
             #Serial port is removed.
             if isinstance(err_, PermissionError):
-                self.__closed.set()
                 self.close()
                 raise err_
             raise Exception("setDtrEnable failed ({!r})".format(err_))
@@ -465,10 +464,9 @@ class GXWindowsHandler(GXSettings, IGXNative):
         flags = ctypes.wintypes.DWORD()
         comstat = COMSTAT()
         if not ctypes.windll.Kernel32.ClearCommError(self.h, ctypes.byref(flags), ctypes.byref(comstat)):
-            err_ = ctypes.WinError();
+            err_ = ctypes.WinError()
             #Serial port is removed.
             if isinstance(err_, PermissionError):
-                self.__closed.set()
                 self.close()
                 raise err_
             raise Exception("getDsrHolding failed ({!r})".format(err_))
@@ -481,10 +479,9 @@ class GXWindowsHandler(GXSettings, IGXNative):
         flags = ctypes.wintypes.DWORD()
         comstat = COMSTAT()
         if not ctypes.windll.Kernel32.ClearCommError(self.h, ctypes.byref(flags), ctypes.byref(comstat)):
-            err_ = ctypes.WinError();
+            err_ = ctypes.WinError()
             #Serial port is removed.
             if isinstance(err_, PermissionError):
-                self.__closed.set()
                 self.close()
                 raise err_
             raise Exception("getBytesToRead failed ({!r})".format(err_))
@@ -497,10 +494,9 @@ class GXWindowsHandler(GXSettings, IGXNative):
         flags = ctypes.wintypes.DWORD()
         comstat = COMSTAT()
         if not ctypes.windll.ClearCommError(self.h, ctypes.byref(flags), ctypes.byref(comstat)):
-            err_ = ctypes.WinError();
+            err_ = ctypes.WinError()
             #Serial port is removed.
             if isinstance(err_, PermissionError):
-                self.__closed.set()
                 self.close()
                 raise err_
             raise Exception("getBytesToWrite failed ({!r})".format(err_))
@@ -524,7 +520,6 @@ class GXWindowsHandler(GXSettings, IGXNative):
             ret = ctypes.windll.kernel32.WaitForMultipleObjects(2, handle_array, 0, -1)
             #If user has close the media.
             if ret == 0:
-                self.__closed.set()
                 return None
 
             if ctypes.windll.Kernel32.GetOverlappedResult(self.h, ctypes.byref(self._overlapped_read), ctypes.byref(c), True) == 0:

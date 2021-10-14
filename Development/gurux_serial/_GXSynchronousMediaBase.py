@@ -110,7 +110,7 @@ class _GXSynchronousMediaBase:
         count : Count of bytes to search.
         Return True if pattern is found.
         """
-        failure = cls.__computeFailure(pattern)
+        failure = _GXSynchronousMediaBase.__computeFailure(pattern)
         j = 0
         if not data or len(data) < index:
             return -1
@@ -197,7 +197,7 @@ class _GXSynchronousMediaBase:
             #If timeout occurred.
             if not isReceived:
                 #If we want to read all data.
-                if args.allData:
+                if args.allData and self.__receivedSize != 0:
                     foundPosition = self.__receivedSize
                 else:
                     foundPosition = -1
