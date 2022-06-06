@@ -38,7 +38,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="gurux_serial",
-    version="1.0.18",
+    version="1.0.19",
     author="Gurux Ltd",
     author_email="gurux@gurux.org",
     description="Gurux serial media is used to commmunication with serial port connections.",
@@ -54,6 +54,9 @@ setuptools.setup(
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
         "Operating System :: OS Independent",
     ],
