@@ -193,6 +193,7 @@ class _GXSynchronousMediaBase:
                     isReceived = self.__receivedEvent.wait(waitTime / 1000)
                 self.__receivedEvent.clear()
             if self.exception:
+                #pylint: disable=raising-bad-type
                 raise self.exception
             #If timeout occurred.
             if not isReceived:
@@ -228,7 +229,7 @@ class _GXSynchronousMediaBase:
                         foundPosition += len(terminator)
 
         #If terminator is not given read only bytes that are needed.
-        if nSize == 0:
+        if nSize == 0 and foundPosition != -1:
             foundPosition = args.count
         return foundPosition
 
