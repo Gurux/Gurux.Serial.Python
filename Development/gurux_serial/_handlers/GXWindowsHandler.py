@@ -31,12 +31,13 @@
 #  This code is licensed under the GNU General Public License v2.
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
+import time
 import ctypes
 import ctypes.wintypes
 from .GXSettings import GXSettings
 from .IGXNative import IGXNative
 
-#Constant values.
+# Constant values.
 INVALID_HANDLE_VALUE = -1
 MS_DSR_ON = 32
 EV_RING = 256
@@ -69,7 +70,7 @@ CLRDTR = 6
 XON = 0x11
 XOFF = 0x13
 MS_RLSD_ON = 128
-#Error code defs.
+# Error code defs.
 ERROR_SUCCESS = 0
 ERROR_NOT_ENOUGH_MEMORY = 8
 ERROR_OPERATION_ABORTED = 995
@@ -77,7 +78,7 @@ ERROR_IO_INCOMPLETE = 996
 ERROR_IO_PENDING = 997
 ERROR_INVALID_USER_BUFFER = 1784
 
-#Error code defs.
+# Error code defs.
 ERROR_SUCCESS = 0
 ERROR_NOT_ENOUGH_MEMORY = 8
 ERROR_OPERATION_ABORTED = 995
@@ -93,7 +94,9 @@ HKEY_LOCAL_MACHINE = 0x80000002
 SYNCHRONIZE = 0x00100000
 KEY_ENUMERATE_SUB_KEYS = 0x0008
 KEY_NOTIFY = 0x0010
-KEY_READ = ((STANDARD_RIGHTS_READ | KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS | KEY_NOTIFY) & (~SYNCHRONIZE))
+KEY_READ = (
+    STANDARD_RIGHTS_READ | KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS | KEY_NOTIFY
+) & (~SYNCHRONIZE)
 KEY_EXECUTE = KEY_READ & ~SYNCHRONIZE
 
 if ctypes.sizeof(ctypes.c_void_p) == 8:
@@ -101,85 +104,108 @@ if ctypes.sizeof(ctypes.c_void_p) == 8:
 else:
     ULONG_PTR = ctypes.c_ulong
 
-#Structyres.
+
+# Structyres.
 class DUMMYSTRUCTNAME(ctypes.Structure):
     # pylint: disable=too-few-public-methods
-    _fields_ = [('Offset', ctypes.wintypes.DWORD),\
-    ('OffsetHigh', ctypes.wintypes.DWORD),]
+    _fields_ = [
+        ("Offset", ctypes.wintypes.DWORD),
+        ("OffsetHigh", ctypes.wintypes.DWORD),
+    ]
+
 
 class DUMMYUNIONNAME(ctypes.Union):
     # pylint: disable=too-few-public-methods
-    _fields_ = [('_0', DUMMYSTRUCTNAME),\
-    ('Pointer', ctypes.c_void_p),]
+    _fields_ = [
+        ("_0", DUMMYSTRUCTNAME),
+        ("Pointer", ctypes.c_void_p),
+    ]
+
 
 class OVERLAPPED(ctypes.Structure):
     # pylint: disable=too-few-public-methods
-    _fields_ = [('Internal', ULONG_PTR),\
-    ('InternalHigh', ULONG_PTR),\
-    ('_0', DUMMYUNIONNAME),\
-    ('hEvent', ctypes.wintypes.HANDLE),]
+    _fields_ = [
+        ("Internal", ULONG_PTR),
+        ("InternalHigh", ULONG_PTR),
+        ("_0", DUMMYUNIONNAME),
+        ("hEvent", ctypes.wintypes.HANDLE),
+    ]
+
 
 class COMSTAT(ctypes.Structure):
     # pylint: disable=too-few-public-methods
-    _fields_ = [('fCtsHold', ctypes.wintypes.DWORD, 1),\
-    ('fDsrHold', ctypes.wintypes.DWORD, 1),\
-    ('fRlsdHold', ctypes.wintypes.DWORD, 1),\
-    ('fXoffHold', ctypes.wintypes.DWORD, 1),\
-    ('fXoffSent', ctypes.wintypes.DWORD, 1),\
-    ('fEof', ctypes.wintypes.DWORD, 1),\
-    ('fTxim', ctypes.wintypes.DWORD, 1),\
-    ('fReserved', ctypes.wintypes.DWORD, 25),\
-    ('cbInQue', ctypes.wintypes.DWORD),\
-    ('cbOutQue', ctypes.wintypes.DWORD),]
+    _fields_ = [
+        ("fCtsHold", ctypes.wintypes.DWORD, 1),
+        ("fDsrHold", ctypes.wintypes.DWORD, 1),
+        ("fRlsdHold", ctypes.wintypes.DWORD, 1),
+        ("fXoffHold", ctypes.wintypes.DWORD, 1),
+        ("fXoffSent", ctypes.wintypes.DWORD, 1),
+        ("fEof", ctypes.wintypes.DWORD, 1),
+        ("fTxim", ctypes.wintypes.DWORD, 1),
+        ("fReserved", ctypes.wintypes.DWORD, 25),
+        ("cbInQue", ctypes.wintypes.DWORD),
+        ("cbOutQue", ctypes.wintypes.DWORD),
+    ]
+
 
 class DCB(ctypes.Structure):
     # pylint: disable=too-few-public-methods, too-many-instance-attributes
-    _fields_ = [('DCBlength', ctypes.wintypes.DWORD),\
-    ('BaudRate', ctypes.wintypes.DWORD),\
-    ('fBinary', ctypes.wintypes.DWORD, 1),\
-    ('fParity', ctypes.wintypes.DWORD, 1),\
-    ('fOutxCtsFlow', ctypes.wintypes.DWORD, 1),\
-    ('fOutxDsrFlow', ctypes.wintypes.DWORD, 1),\
-    ('fDtrControl', ctypes.wintypes.DWORD, 2),\
-    ('fDsrSensitivity', ctypes.wintypes.DWORD, 1),\
-    ('fTXContinueOnXoff', ctypes.wintypes.DWORD, 1),\
-    ('fOutX', ctypes.wintypes.DWORD, 1),\
-    ('fInX', ctypes.wintypes.DWORD, 1),\
-    ('fErrorChar', ctypes.wintypes.DWORD, 1),\
-    ('fNull', ctypes.wintypes.DWORD, 1),\
-    ('fRtsControl', ctypes.wintypes.DWORD, 2),\
-    ('fAbortOnError', ctypes.wintypes.DWORD, 1),\
-    ('fDummy2', ctypes.wintypes.DWORD, 17),\
-    ('wReserved', ctypes.wintypes.WORD),\
-    ('XonLim', ctypes.wintypes.WORD),\
-    ('XoffLim', ctypes.wintypes.WORD),\
-    ('ByteSize', ctypes.wintypes.BYTE),\
-    ('Parity', ctypes.wintypes.BYTE),\
-    ('StopBits', ctypes.wintypes.BYTE),\
-    ('XonChar', ctypes.c_char),\
-    ('XoffChar', ctypes.c_char),\
-    ('ErrorChar', ctypes.c_char),\
-    ('EofChar', ctypes.c_char),\
-    ('EvtChar', ctypes.c_char),\
-    ('wReserved1', ctypes.wintypes.WORD),]
+    _fields_ = [
+        ("DCBlength", ctypes.wintypes.DWORD),
+        ("BaudRate", ctypes.wintypes.DWORD),
+        ("fBinary", ctypes.wintypes.DWORD, 1),
+        ("fParity", ctypes.wintypes.DWORD, 1),
+        ("fOutxCtsFlow", ctypes.wintypes.DWORD, 1),
+        ("fOutxDsrFlow", ctypes.wintypes.DWORD, 1),
+        ("fDtrControl", ctypes.wintypes.DWORD, 2),
+        ("fDsrSensitivity", ctypes.wintypes.DWORD, 1),
+        ("fTXContinueOnXoff", ctypes.wintypes.DWORD, 1),
+        ("fOutX", ctypes.wintypes.DWORD, 1),
+        ("fInX", ctypes.wintypes.DWORD, 1),
+        ("fErrorChar", ctypes.wintypes.DWORD, 1),
+        ("fNull", ctypes.wintypes.DWORD, 1),
+        ("fRtsControl", ctypes.wintypes.DWORD, 2),
+        ("fAbortOnError", ctypes.wintypes.DWORD, 1),
+        ("fDummy2", ctypes.wintypes.DWORD, 17),
+        ("wReserved", ctypes.wintypes.WORD),
+        ("XonLim", ctypes.wintypes.WORD),
+        ("XoffLim", ctypes.wintypes.WORD),
+        ("ByteSize", ctypes.wintypes.BYTE),
+        ("Parity", ctypes.wintypes.BYTE),
+        ("StopBits", ctypes.wintypes.BYTE),
+        ("XonChar", ctypes.c_char),
+        ("XoffChar", ctypes.c_char),
+        ("ErrorChar", ctypes.c_char),
+        ("EofChar", ctypes.c_char),
+        ("EvtChar", ctypes.c_char),
+        ("wReserved1", ctypes.wintypes.WORD),
+    ]
 
-#ctypes.windll.kernel32.WriteFile don't work for all Windows versions for some
-#reason.
+
+# ctypes.windll.kernel32.WriteFile don't work for all Windows versions for some
+# reason.
 _stdcall_libraries = {}
-_stdcall_libraries['kernel32'] = ctypes.WinDLL('kernel32')
-WriteFile = _stdcall_libraries['kernel32'].WriteFile
+_stdcall_libraries["kernel32"] = ctypes.WinDLL("kernel32")
+WriteFile = _stdcall_libraries["kernel32"].WriteFile
 WriteFile.restype = ctypes.wintypes.BOOL
 LPOVERLAPPED = ctypes.POINTER(OVERLAPPED)
 # pylint: disable=no-member
 
-#LPDWORD is missing from older ctypes.wintypes.
+# LPDWORD is missing from older ctypes.wintypes.
 LPDWORD = ctypes.POINTER(ctypes.wintypes.DWORD)
 
-WriteFile.argtypes = [ctypes.wintypes.HANDLE, ctypes.wintypes.LPCVOID, ctypes.wintypes.DWORD, LPDWORD, LPOVERLAPPED]
+WriteFile.argtypes = [
+    ctypes.wintypes.HANDLE,
+    ctypes.wintypes.LPCVOID,
+    ctypes.wintypes.DWORD,
+    LPDWORD,
+    LPOVERLAPPED,
+]
+
 
 # pylint: disable=too-many-public-methods,too-many-instance-attributes
 class GXWindowsHandler(GXSettings, IGXNative):
-    #is Windows unicode.
+    # is Windows unicode.
     __unicode = None
 
     def __init__(self):
@@ -203,7 +229,7 @@ class GXWindowsHandler(GXSettings, IGXNative):
         ##Check is UNICODE or ASCII versions used.
         if GXWindowsHandler.__unicode is None:
             try:
-                h = _stdcall_libraries['kernel32'].CreateEventW(0, 0, 0, 0)
+                h = _stdcall_libraries["kernel32"].CreateEventW(0, 0, 0, 0)
                 ctypes.windll.Kernel32.CloseHandle(h)
                 GXWindowsHandler.__unicode = True
             except AttributeError:
@@ -212,20 +238,32 @@ class GXWindowsHandler(GXSettings, IGXNative):
 
     def getPortNames(self):
         """Returns available serial ports."""
-        #Use RegOpenKeyEx() with the new Registry path to get an open handle
-        #to the child key you want to enumerate.
+        # Use RegOpenKeyEx() with the new Registry path to get an open handle
+        # to the child key you want to enumerate.
         hKey = ctypes.wintypes.HKEY()
         if self.isUnicode():
-            ret = ctypes.windll.Kernel32.RegOpenKeyExW(HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\SERIALCOMM", \
-                0, KEY_ENUMERATE_SUB_KEYS | KEY_EXECUTE | KEY_QUERY_VALUE, ctypes.byref(hKey))
+            ret = ctypes.windll.Kernel32.RegOpenKeyExW(
+                HKEY_LOCAL_MACHINE,
+                "HARDWARE\\DEVICEMAP\\SERIALCOMM",
+                0,
+                KEY_ENUMERATE_SUB_KEYS | KEY_EXECUTE | KEY_QUERY_VALUE,
+                ctypes.byref(hKey),
+            )
         else:
-            ret = ctypes.windll.Kernel32.RegOpenKeyExA(HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\SERIALCOMM", \
-                0, KEY_ENUMERATE_SUB_KEYS | KEY_EXECUTE | KEY_QUERY_VALUE, ctypes.byref(hKey))
-        #If there are no serial ports installed.
+            ret = ctypes.windll.Kernel32.RegOpenKeyExA(
+                HKEY_LOCAL_MACHINE,
+                "HARDWARE\\DEVICEMAP\\SERIALCOMM",
+                0,
+                KEY_ENUMERATE_SUB_KEYS | KEY_EXECUTE | KEY_QUERY_VALUE,
+                ctypes.byref(hKey),
+            )
+        # If there are no serial ports installed.
         if ret == 2:
             return []
         if ret != 0:
-            raise Exception('Failed to get port names: {!r}'.format(ctypes.WinError(ret)))
+            raise Exception(
+                "Failed to get port names: {!r}".format(ctypes.WinError(ret))
+            )
 
         dwType = ctypes.wintypes.DWORD()
         dwcValueName = ctypes.wintypes.DWORD(256)
@@ -236,9 +274,27 @@ class GXWindowsHandler(GXSettings, IGXNative):
         ports = []
         while pos < 100:
             if self.isUnicode():
-                ret = ctypes.windll.Kernel32.RegEnumValueW(hKey, pos, valueName, ctypes.byref(dwcValueName), None, ctypes.byref(dwType), deviceName, ctypes.byref(cbData))
+                ret = ctypes.windll.Kernel32.RegEnumValueW(
+                    hKey,
+                    pos,
+                    valueName,
+                    ctypes.byref(dwcValueName),
+                    None,
+                    ctypes.byref(dwType),
+                    deviceName,
+                    ctypes.byref(cbData),
+                )
             else:
-                ret = ctypes.windll.Kernel32.RegEnumValueA(hKey, pos, valueName, ctypes.byref(dwcValueName), None, ctypes.byref(dwType), deviceName, ctypes.byref(cbData))
+                ret = ctypes.windll.Kernel32.RegEnumValueA(
+                    hKey,
+                    pos,
+                    valueName,
+                    ctypes.byref(dwcValueName),
+                    None,
+                    ctypes.byref(dwType),
+                    deviceName,
+                    ctypes.byref(cbData),
+                )
             if ret != 0:
                 break
             ports.append(deviceName.value)
@@ -281,10 +337,12 @@ class GXWindowsHandler(GXSettings, IGXNative):
         dcb.fRtsControl = RTS_CONTROL_DISABLE
         dcb.fDtrControl = DTR_CONTROL_DISABLE
         if not ctypes.windll.Kernel32.SetCommState(self.h, ctypes.byref(dcb)):
-            raise Exception('Failed to set serial port settings: {!r}'.format(ctypes.WinError()))
+            raise Exception(
+                "Failed to set serial port settings: {!r}".format(ctypes.WinError())
+            )
 
     def open(self, port):
-        #pylint: disable=bare-except
+        # pylint: disable=bare-except
         """
         Open serial port.
 
@@ -295,36 +353,58 @@ class GXWindowsHandler(GXSettings, IGXNative):
             raise Exception("Invalid serial port name.")
         # Open the file for writing.
         if self.isUnicode():
-            self.h = ctypes.windll.Kernel32.CreateFileW('\\\\.\\' + port, GENERIC_READ | GENERIC_WRITE,
-                                                        0,  # exclusive access
-                                                        None,  # no security
-                                                        OPEN_EXISTING,
-                                                        FILE_FLAG_OVERLAPPED,
-                                                        0)
+            self.h = ctypes.windll.Kernel32.CreateFileW(
+                "\\\\.\\" + port,
+                GENERIC_READ | GENERIC_WRITE,
+                0,  # exclusive access
+                None,  # no security
+                OPEN_EXISTING,
+                FILE_FLAG_OVERLAPPED,
+                0,
+            )
         else:
-            self.h = ctypes.windll.Kernel32.CreateFileA('\\\\.\\' + port, GENERIC_READ | GENERIC_WRITE,
-                                                        0,  # exclusive access
-                                                        None,  # no security
-                                                        OPEN_EXISTING,
-                                                        FILE_FLAG_OVERLAPPED,
-                                                        0)
+            self.h = ctypes.windll.Kernel32.CreateFileA(
+                "\\\\.\\" + port,
+                GENERIC_READ | GENERIC_WRITE,
+                0,  # exclusive access
+                None,  # no security
+                OPEN_EXISTING,
+                FILE_FLAG_OVERLAPPED,
+                0,
+            )
 
         if self.h == INVALID_HANDLE_VALUE:
             ret = ctypes.windll.Kernel32.GetLastError()
-            raise Exception("Failed to open port {!r}: {!r}".format(port, str(ctypes.WinError(ret))))
+            raise Exception(
+                "Failed to open port {!r}: {!r}".format(port, str(ctypes.WinError(ret)))
+            )
         try:
             if self.isUnicode():
-                self._overlapped_read = OVERLAPPED(hEvent=ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0))
-                self._overlapped_write = OVERLAPPED(hEvent=ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0))
+                self._overlapped_read = OVERLAPPED(
+                    hEvent=ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0)
+                )
+                self._overlapped_write = OVERLAPPED(
+                    hEvent=ctypes.windll.Kernel32.CreateEventW(0, 0, 0, 0)
+                )
             else:
-                self._overlapped_read = OVERLAPPED(hEvent=ctypes.windll.Kernel32.CreateEventA(0, 0, 0, 0))
-                self._overlapped_write = OVERLAPPED(hEvent=ctypes.windll.Kernel32.CreateEventA(0, 0, 0, 0))
+                self._overlapped_read = OVERLAPPED(
+                    hEvent=ctypes.windll.Kernel32.CreateEventA(0, 0, 0, 0)
+                )
+                self._overlapped_write = OVERLAPPED(
+                    hEvent=ctypes.windll.Kernel32.CreateEventA(0, 0, 0, 0)
+                )
             if ctypes.windll.Kernel32.ResetEvent(self._closing) == 0:
                 ret = ctypes.windll.Kernel32.GetLastError()
-                raise Exception("Failed to open port {!r}: {!r}".format(port, str(ctypes.WinError(ret))))
+                raise Exception(
+                    "Failed to open port {!r}: {!r}".format(
+                        port, str(ctypes.WinError(ret))
+                    )
+                )
             self.__updateSettings()
-            #Clear buffers.
-            ctypes.windll.Kernel32.PurgeComm(self.h, PURGE_TXCLEAR | PURGE_TXABORT | PURGE_RXCLEAR | PURGE_RXABORT)
+            # Clear buffers.
+            ctypes.windll.Kernel32.PurgeComm(
+                self.h, PURGE_TXCLEAR | PURGE_TXABORT | PURGE_RXCLEAR | PURGE_RXABORT
+            )
         except Exception as e:
             try:
                 self.close()
@@ -339,15 +419,19 @@ class GXWindowsHandler(GXSettings, IGXNative):
         """
         Close serial port.
         """
+        #Some chipsets need a small delay. Do not remove.
         if self.h != INVALID_HANDLE_VALUE:
             ctypes.windll.Kernel32.SetEvent(self._closing)
             if self._overlapped_read:
                 ctypes.windll.Kernel32.CloseHandle(self._overlapped_read.hEvent)
+                time.sleep(0.01)
                 self._overlapped_read = None
             if self._overlapped_write:
                 ctypes.windll.Kernel32.CloseHandle(self._overlapped_write.hEvent)
+                time.sleep(0.01)
                 self._overlapped_write = None
             ctypes.windll.Kernel32.CloseHandle(self.h)
+            time.sleep(0.01)
             self.h = INVALID_HANDLE_VALUE
 
     def getBaudRate(self):
@@ -356,19 +440,15 @@ class GXWindowsHandler(GXSettings, IGXNative):
         """
         return self.__getCommState().BaudRate
 
-
     def setBaudRate(self, value):
         """
         Set baud rate.
         """
         self.__updateSettings()
 
-
     def getDataBits(self):
-        """Get data bits.
-        """
+        """Get data bits."""
         return self.__getCommState().ByteSize
-
 
     def setDataBits(self, value):
         """Set amount of data bits.
@@ -376,10 +456,8 @@ class GXWindowsHandler(GXSettings, IGXNative):
         """
         self.__updateSettings()
 
-
     def getParity(self):
-        """Get parity.
-        """
+        """Get parity."""
         return self.__getCommState().fParity
 
     def setParity(self, value):
@@ -389,13 +467,11 @@ class GXWindowsHandler(GXSettings, IGXNative):
         """
         self.__updateSettings()
 
-
     def getStopBits(self):
         """
         Get stop bits.
         """
         return self.__getCommState().StopBits
-
 
     def setStopBits(self, value):
         """
@@ -451,7 +527,7 @@ class GXWindowsHandler(GXSettings, IGXNative):
             tmp = ctypes.wintypes.DWORD(CLRDTR)
         if ctypes.windll.Kernel32.EscapeCommFunction(self.h, tmp) == 0:
             err_ = ctypes.WinError()
-            #Serial port is removed.
+            # Serial port is removed.
             if isinstance(err_, PermissionError):
                 self.close()
                 raise err_
@@ -463,9 +539,11 @@ class GXWindowsHandler(GXSettings, IGXNative):
         """
         flags = ctypes.wintypes.DWORD()
         comstat = COMSTAT()
-        if not ctypes.windll.Kernel32.ClearCommError(self.h, ctypes.byref(flags), ctypes.byref(comstat)):
+        if not ctypes.windll.Kernel32.ClearCommError(
+            self.h, ctypes.byref(flags), ctypes.byref(comstat)
+        ):
             err_ = ctypes.WinError()
-            #Serial port is removed.
+            # Serial port is removed.
             if isinstance(err_, PermissionError):
                 self.close()
                 raise err_
@@ -478,9 +556,11 @@ class GXWindowsHandler(GXSettings, IGXNative):
         """
         flags = ctypes.wintypes.DWORD()
         comstat = COMSTAT()
-        if not ctypes.windll.Kernel32.ClearCommError(self.h, ctypes.byref(flags), ctypes.byref(comstat)):
+        if not ctypes.windll.Kernel32.ClearCommError(
+            self.h, ctypes.byref(flags), ctypes.byref(comstat)
+        ):
             err_ = ctypes.WinError()
-            #Serial port is removed.
+            # Serial port is removed.
             if isinstance(err_, PermissionError):
                 self.close()
                 raise err_
@@ -493,9 +573,11 @@ class GXWindowsHandler(GXSettings, IGXNative):
         """
         flags = ctypes.wintypes.DWORD()
         comstat = COMSTAT()
-        if not ctypes.windll.ClearCommError(self.h, ctypes.byref(flags), ctypes.byref(comstat)):
+        if not ctypes.windll.ClearCommError(
+            self.h, ctypes.byref(flags), ctypes.byref(comstat)
+        ):
             err_ = ctypes.WinError()
-            #Serial port is removed.
+            # Serial port is removed.
             if isinstance(err_, PermissionError):
                 self.close()
                 raise err_
@@ -511,38 +593,57 @@ class GXWindowsHandler(GXSettings, IGXNative):
             count = 1
         buf = ctypes.create_string_buffer(count)
         c = ctypes.wintypes.DWORD()
-        if ctypes.windll.Kernel32.ReadFile(self.h, buf, count, ctypes.byref(c), ctypes.byref(self._overlapped_read)) == 0:
+        if (
+            ctypes.windll.Kernel32.ReadFile(
+                self.h, buf, count, ctypes.byref(c), ctypes.byref(self._overlapped_read)
+            )
+            == 0
+        ):
             ret = ctypes.windll.Kernel32.GetLastError()
             if ret not in (ERROR_SUCCESS, ERROR_IO_PENDING):
                 raise Exception("Read failed ({!r})".format(ctypes.WinError()))
             arrtype = ctypes.wintypes.HANDLE * 2
             handle_array = arrtype(self._closing, self._overlapped_read.hEvent)
             ret = ctypes.windll.kernel32.WaitForMultipleObjects(2, handle_array, 0, -1)
-            #If user has close the media.
+            # If user has close the media.
             if ret == 0:
                 return None
 
-            if ctypes.windll.Kernel32.GetOverlappedResult(self.h, ctypes.byref(self._overlapped_read), ctypes.byref(c), True) == 0:
+            if (
+                ctypes.windll.Kernel32.GetOverlappedResult(
+                    self.h, ctypes.byref(self._overlapped_read), ctypes.byref(c), True
+                )
+                == 0
+            ):
                 if ctypes.windll.Kernel32.GetLastError() != ERROR_OPERATION_ABORTED:
                     raise Exception("Read failed  ({!r})".format(ctypes.WinError()))
-        return bytearray(buf.raw[:c.value])
+        return bytearray(buf.raw[: c.value])
 
     def write(self, data):
         """Write data to the serial port."""
         if self.h == INVALID_HANDLE_VALUE:
             raise Exception("Serial port is not open")
         n = ctypes.wintypes.DWORD()
-        if WriteFile(self.h, data, len(data), ctypes.byref(n), self._overlapped_write) == 0:
+        if (
+            WriteFile(self.h, data, len(data), ctypes.byref(n), self._overlapped_write)
+            == 0
+        ):
             errorcode = ERROR_SUCCESS
         else:
             errorcode = ctypes.windll.Kernel32.GetLastError()
-        if errorcode in (ERROR_INVALID_USER_BUFFER, ERROR_NOT_ENOUGH_MEMORY, ERROR_OPERATION_ABORTED):
+        if errorcode in (
+            ERROR_INVALID_USER_BUFFER,
+            ERROR_NOT_ENOUGH_MEMORY,
+            ERROR_OPERATION_ABORTED,
+        ):
             return 0
         if errorcode == ERROR_IO_PENDING:
             arrtype = ctypes.wintypes.HANDLE * 2
             handle_array = arrtype(self._closing, self._overlapped_write.hEvent)
-            ret = ctypes.windll.kernel32.WaitForMultipleObjects(2, handle_array, 0, 1000)
-            #If user has close the media.
+            ret = ctypes.windll.kernel32.WaitForMultipleObjects(
+                2, handle_array, 0, 1000
+            )
+            # If user has close the media.
             if ret == 0:
                 return None
         if errorcode == ERROR_SUCCESS:
@@ -553,7 +654,9 @@ class GXWindowsHandler(GXSettings, IGXNative):
         """Returns Clear To Send holding flag."""
         flags = ctypes.wintypes.DWORD()
         comstat = COMSTAT()
-        if not ctypes.windll.Kernel32.ClearCommError(self.h, ctypes.byref(flags), ctypes.byref(comstat)):
+        if not ctypes.windll.Kernel32.ClearCommError(
+            self.h, ctypes.byref(flags), ctypes.byref(comstat)
+        ):
             raise Exception("ClearCommError failed ({!r})".format(ctypes.WinError()))
         return comstat.fCtsHold != 0
 
@@ -567,50 +670,53 @@ class GXWindowsHandler(GXSettings, IGXNative):
     def getHandshake(self):
         """Gets the handshaking protocol for serial port transmission of data."""
         dcb = self.__getCommState()
-        #Disable DTR monitoring
-        #Disable RTS (Ready To Send)
-        if dcb.fDtrControl == DTR_CONTROL_DISABLE and dcb.fRtsControl == RTS_CONTROL_DISABLE:
-            #Enable XON/XOFF for transmission
-            #Enable XON/XOFF for receiving
+        # Disable DTR monitoring
+        # Disable RTS (Ready To Send)
+        if (
+            dcb.fDtrControl == DTR_CONTROL_DISABLE
+            and dcb.fRtsControl == RTS_CONTROL_DISABLE
+        ):
+            # Enable XON/XOFF for transmission
+            # Enable XON/XOFF for receiving
             if dcb.fOutX and dcb.fInX:
-                #XOnXOff
+                # XOnXOff
                 return 1
-            #None
+            # None
             return 0
-        #Enable XON/XOFF for transmission
-        #Enable XON/XOFF for receiving
+        # Enable XON/XOFF for transmission
+        # Enable XON/XOFF for receiving
         if dcb.fOutX and dcb.fInX:
-            #RequestToSendXOnXOff
+            # RequestToSendXOnXOff
             return 3
-        #hardware flow control is used.
+        # hardware flow control is used.
         return 2
 
     def setHandshake(self, value):
         # pylint: disable=attribute-defined-outside-init
         """Sets the handshaking protocol for serial port transmission of data."""
         dcb = self.__getCommState()
-        #None
+        # None
         if value == 0:
             dcb.fDtrControl = DTR_CONTROL_DISABLE
-            #Disable RTS (Ready To Send)
+            # Disable RTS (Ready To Send)
             dcb.fRtsControl = RTS_CONTROL_DISABLE
             dcb.fOutX = dcb.fInX = 0
-        #XOnXOff
+        # XOnXOff
         elif value == 1:
             dcb.fDtrControl = DTR_CONTROL_DISABLE
-            #Disable RTS (Ready To Send)
+            # Disable RTS (Ready To Send)
             dcb.fRtsControl = RTS_CONTROL_DISABLE
             dcb.fOutX = dcb.fInX = 1
-        #hardware flow control is used.
+        # hardware flow control is used.
         elif value == 2:
             dcb.fDtrControl = DTR_CONTROL_ENABLE
-            #Disable RTS (Ready To Send)
+            # Disable RTS (Ready To Send)
             dcb.fRtsControl = RTS_CONTROL_ENABLE
             dcb.fOutX = dcb.fInX = 0
-        #RequestToSendXOnXOff
+        # RequestToSendXOnXOff
         elif value == 3:
             dcb.fDtrControl = DTR_CONTROL_ENABLE
-            #Disable RTS (Ready To Send)
+            # Disable RTS (Ready To Send)
             dcb.fRtsControl = RTS_CONTROL_ENABLE
             dcb.fOutX = dcb.fInX = 1
         if ctypes.windll.Kernel32.SetCommState(self.h, ctypes.byref(dcb)) == 0:

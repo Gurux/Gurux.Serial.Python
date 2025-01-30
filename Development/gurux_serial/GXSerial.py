@@ -213,7 +213,7 @@ class GXSerial(IGXMedia):
                     self.__handleReceivedData(data, self.__portName)
                     #Give some time before read next bytes.  In this way we are
                     #not reading data one byte at the time.
-                    time.sleep(0.1)
+                    time.sleep(0.01)
             except Exception as ex:
                 #If serial port is removed.
                 if not self.isOpen():
